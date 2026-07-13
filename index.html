@@ -232,6 +232,74 @@
     margin: 2px 0 4px;
   }
 
+  /* 주간(월~금) 급식 카드 */
+  .week-wrap{
+    margin-top: 12px;
+    display:flex;
+    flex-direction:column;
+    gap: 12px;
+  }
+  .day-card{
+    border: 2px solid var(--ink);
+    border-radius: 16px;
+    padding: 12px;
+    background: #FFFDF7;
+    animation: pop .25s ease;
+  }
+  .day-card.today{
+    border-color: var(--coral);
+    box-shadow: 0 0 0 3px rgba(255,111,97,0.18);
+  }
+  .day-header{
+    display:flex;
+    align-items:baseline;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .day-header .day-name{ font-family:'Jua', sans-serif; font-size:15.5px; }
+  .day-header .day-date{ font-size:12px; color:#8a8fb0; }
+  .today-badge{
+    margin-left:auto;
+    font-size:11px;
+    font-weight:700;
+    color: white;
+    background: var(--coral);
+    padding: 2px 8px;
+    border-radius: 8px;
+  }
+  .day-tray{
+    background: #DCE7EA;
+    border: 3px solid var(--ink);
+    border-radius: 16px;
+    padding: 10px;
+    display:grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    box-shadow: inset 0 2px 8px rgba(0,0,0,0.1);
+  }
+  .day-slot{
+    background: var(--paper);
+    border: 2px solid var(--ink);
+    border-radius: 12px;
+    min-height: 62px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    padding: 4px;
+    font-size: 11.5px;
+    font-weight: 700;
+    line-height: 1.25;
+  }
+  .day-slot .icon{ font-size:16px; margin-bottom:2px; }
+  .day-empty{
+    text-align:center;
+    font-size: 13px;
+    color: #9a9ec2;
+    padding: 14px 0;
+  }
+
   footer{
     text-align:center;
     margin-top: 26px;
@@ -278,9 +346,9 @@
         </div>
         <div class="field-row">
           <input type="date" id="mealDate" />
-          <button class="btn btn-green" onclick="searchMeal()">🍽️ 급식 보기</button>
+          <button class="btn btn-green" onclick="searchMeal()">🍽️ 이번주 급식 보기</button>
         </div>
-        <div class="hint">NEIS 급식식단정보 API 연동 (자체 서버 프록시 경유) · 정확한 학교 전체 이름을 입력해 주세요</div>
+        <div class="hint">NEIS 급식식단정보 API 연동 (자체 서버 프록시 경유) · 정확한 학교 전체 이름을 입력해 주세요 · 선택한 날짜가 속한 주(월~금)를 한번에 보여줘요</div>
         <div id="mealResult"></div>
       </div>
     </section>
@@ -441,12 +509,43 @@ const MOCK_MEAL_POOL = [
   ['보리밥', '콩나물국', '돈까스&소스', '브로콜리무침', '깍두기', '요구르트'],
   ['흑미밥', '미역국', '닭갈비', '계란말이', '오이무침', '수박']
 ];
-// 학교명 문자열을 기반으로 목업 데이터 풀에서 하나를 고르기 위한 간단한 해시
-function pickMockMeal(schoolName){
+function hashStr(s){
   let sum = 0;
-  for(let i=0;i<schoolName.length;i++) sum += schoolName.charCodeAt(i);
-  return MOCK_MEAL_POOL[sum % MOCK_MEAL_POOL.length];
+  for(let i=0;i<s.length;i++) sum += s.charCodeAt(i);
+  return sum;
 }
+// 학교명 + 요일 인덱스로 목업 풀에서 하나 골라서 그 주의 목업 데이터 구성
+function buildMockWeekData(schoolName, days){
+  const mealsByDate = {};
+  days.forEach((d, i) => {
+    const items = MOCK_MEAL_POOL[(hashStr(schoolName) + i) % MOCK_MEAL_POOL.length];
+    mealsByDate[toYmd(d)] = { DDISH_NM: items.join('<br/>'), MMEAL_SC_CODE: '2' };
+  });
+  return mealsByDate;
+}
+
+/* ---------------- 날짜 유틸 (주간 계산용) ---------------- */
+const WEEKDAY_LABELS = ['일','월','화','수','목','금','토'];
+function pad2(n){ return String(n).padStart(2, '0'); }
+function toYmd(d){ return `${d.getFullYear()}${pad2(d.getMonth()+1)}${pad2(d.getDate())}`; }
+function toDisplayDate(d){ return `${d.getMonth()+1}/${d.getDate()}`; }
+
+// 기준 날짜(YYYY-MM-DD)가 속한 주의 월~금 Date 배열 반환
+function getWeekMonToFri(baseDateStr){
+  const base = new Date(baseDateStr + 'T00:00:00');
+  const dow = base.getDay(); // 0=일 ... 6=토
+  const diffToMon = dow === 0 ? -6 : 1 - dow;
+  const monday = new Date(base);
+  monday.setDate(base.getDate() + diffToMon);
+  const days = [];
+  for(let i=0;i<5;i++){
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    days.push(d);
+  }
+  return days;
+}
+
 const SLOT_META = [
   {icon:'🍚', label:'밥'},
   {icon:'🥣', label:'국/찌개'},
@@ -516,7 +615,7 @@ function renderBooks(books, keyword){
   `;
 }
 
-/* ---------------- 급식 검색 ---------------- */
+/* ---------------- 급식 검색 (이번주 월~금) ---------------- */
 async function searchMeal(){
   const officeCode = document.getElementById('officeSelect').value;
   const officeName = OFFICE_CODES.find(o => o.code === officeCode)?.name || '';
@@ -529,10 +628,12 @@ async function searchMeal(){
     return;
   }
 
-  resultEl.innerHTML = `<div class="status"><span class="big-emoji">🍽️</span>${officeName}에서 '${schoolName}' 급식을 확인하고 있어요...</div>`;
+  const days = getWeekMonToFri(date); // 월~금 Date 배열
+
+  resultEl.innerHTML = `<div class="status"><span class="big-emoji">🍽️</span>${officeName}에서 '${schoolName}'의 이번주 급식을 확인하고 있어요...</div>`;
 
   if(CONFIG.USE_MOCK_MEAL){
-    setTimeout(() => renderMeal(pickMockMeal(schoolName), date, schoolName, officeName), 500);
+    setTimeout(() => renderWeekMeal(days, buildMockWeekData(schoolName, days), schoolName, officeName), 500);
     return;
   }
 
@@ -556,25 +657,25 @@ async function searchMeal(){
       fullName = schoolRows[0].SCHUL_NM;
     }
 
-    // 2단계: 학교코드로 급식 정보 조회
-    const ymd = date.replaceAll('-', '');
-    const mealUrl = `${CONFIG.NEIS_MEAL_URL}&ATPT_OFCDC_SC_CODE=${officeCode}&SD_SCHUL_CODE=${schulCode}&MLSV_YMD=${ymd}`;
+    // 2단계: 학교코드로 이번주(월~금) 급식 정보 한 번에 조회
+    const fromYmd = toYmd(days[0]);
+    const toYmdVal = toYmd(days[4]);
+    const mealUrl = `${CONFIG.NEIS_MEAL_URL}&ATPT_OFCDC_SC_CODE=${officeCode}&SD_SCHUL_CODE=${schulCode}&MLSV_FROM_YMD=${fromYmd}&MLSV_TO_YMD=${toYmdVal}&pSize=50`;
     const mealRes = await fetch(mealUrl);
     if(!mealRes.ok) throw new Error('meal-http-' + mealRes.status);
     const mealData = await mealRes.json();
     const mealRows = mealData.mealServiceDietInfo?.[1]?.row || [];
 
-    if(!mealRows.length){
-      renderMeal([], date, fullName, officeName);
-      return;
-    }
-    // DDISH_NM 예: "차조밥1.5.6.<br/>된장국(구리고)5.6.9.13.<br/>..."
-    // 학교명 괄호 표기와 알레르기 번호코드를 제거해서 보여줘요.
-    const items = mealRows[0].DDISH_NM
-      .split('<br/>')
-      .map(s => s.replace(/\([^)]*\)/g, '').replace(/[0-9.]+$/, '').trim())
-      .filter(Boolean);
-    renderMeal(items, date, fullName, officeName);
+    // 날짜별로 그룹화 (같은 날 여러 끼니가 있으면 중식(코드 2)을 우선)
+    const mealsByDate = {};
+    mealRows.forEach(r => {
+      const ymd = r.MLSV_YMD;
+      if(!mealsByDate[ymd] || r.MMEAL_SC_CODE === '2'){
+        mealsByDate[ymd] = r;
+      }
+    });
+
+    renderWeekMeal(days, mealsByDate, fullName, officeName);
 
   } catch(err){
     console.error(err);
@@ -587,26 +688,50 @@ async function searchMeal(){
   }
 }
 
-function renderMeal(items, date, schoolName, officeName){
+function renderWeekMeal(days, mealsByDate, schoolName, officeName){
   const resultEl = document.getElementById('mealResult');
-  if(!items || !items.length){
-    resultEl.innerHTML = `<div class="status"><span class="big-emoji">📭</span>해당 날짜의 급식 정보가 없어요. (주말/방학일 수 있어요)</div>`;
-    return;
-  }
-  const slots = items.slice(0,6);
+  const todayYmd = toYmd(new Date());
+
+  const cardsHtml = days.map(d => {
+    const ymd = toYmd(d);
+    const row = mealsByDate[ymd];
+    const isToday = ymd === todayYmd;
+
+    let bodyHtml;
+    if(row && row.DDISH_NM){
+      const items = row.DDISH_NM
+        .split('<br/>')
+        .map(s => s.replace(/\([^)]*\)/g, '').replace(/[0-9.]+$/, '').trim())
+        .filter(Boolean)
+        .slice(0, 6);
+      bodyHtml = `
+        <div class="day-tray">
+          ${items.map((item, i) => `
+            <div class="day-slot">
+              <span class="icon">${(SLOT_META[i] || SLOT_META[5]).icon}</span>
+              ${item}
+            </div>
+          `).join('')}
+        </div>`;
+    } else {
+      bodyHtml = `<div class="day-empty">🍽️ 이 날은 급식 정보가 없어요</div>`;
+    }
+
+    return `
+      <div class="day-card ${isToday ? 'today' : ''}">
+        <div class="day-header">
+          <span class="day-name">${WEEKDAY_LABELS[d.getDay()]}요일</span>
+          <span class="day-date">${toDisplayDate(d)}</span>
+          ${isToday ? '<span class="today-badge">오늘</span>' : ''}
+        </div>
+        ${bodyHtml}
+      </div>`;
+  }).join('');
+
   resultEl.innerHTML = `
-    <div class="tray-wrap">
-      <div class="meal-date-label">🏫 ${schoolName} <span style="font-size:12px;color:#8a8fb0;">(${officeName})</span></div>
-      <div class="meal-date-label" style="font-size:14px;margin-top:0;">📅 ${date} 급식표</div>
-      <div class="tray">
-        ${slots.map((item, i) => `
-          <div class="tray-slot">
-            <span class="icon">${(SLOT_META[i] || SLOT_META[5]).icon}</span>
-            ${item}
-          </div>
-        `).join('')}
-      </div>
-    </div>
+    <div class="meal-date-label">🏫 ${schoolName} <span style="font-size:12px;color:#8a8fb0;">(${officeName})</span></div>
+    <div class="meal-date-label" style="font-size:13px;margin-top:0;color:#8a8fb0;">📅 ${toDisplayDate(days[0])} ~ ${toDisplayDate(days[4])} (이번주)</div>
+    <div class="week-wrap">${cardsHtml}</div>
   `;
 }
 </script>
