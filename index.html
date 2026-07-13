@@ -581,6 +581,21 @@ function pad2(n){ return String(n).padStart(2, '0'); }
 function toYmd(d){ return `${d.getFullYear()}${pad2(d.getMonth()+1)}${pad2(d.getDate())}`; }
 function toDisplayDate(d){ return `${d.getMonth()+1}/${d.getDate()}`; }
 
+// NEIS DDISH_NM 한 줄을 사람이 읽기 좋은 메뉴명으로 정제
+// 예: "감자스프/1.2.5.6.10.13.15.16." -> "감자스프"
+function cleanDishName(raw){
+  let s = raw.replace(/\([^)]*\)/g, '').trim();
+  // 끝에 남은 알레르기 번호(숫자.숫자...)와 그 앞뒤에 붙은 구분기호를
+  // 더 지울 게 없을 때까지 반복적으로 제거
+  let prev;
+  do{
+    prev = s;
+    s = s.replace(/[0-9]+(\.[0-9]+)*\.?$/, '').trim();      // 끝의 숫자.숫자. 형태
+    s = s.replace(/[\/.,*·\-~]+$/, '').trim();               // 끝에 남는 구분기호
+  } while(s !== prev && s.length > 0);
+  return s;
+}
+
 // 기준 날짜(YYYY-MM-DD)가 속한 주의 월~금 Date 배열 반환
 function getWeekMonToFri(baseDateStr){
   const base = new Date(baseDateStr + 'T00:00:00');
@@ -757,7 +772,7 @@ function renderWeekMeal(days, mealsByDate, schoolName, officeName){
     if(row && row.DDISH_NM){
       const items = row.DDISH_NM
         .split('<br/>')
-        .map(s => s.replace(/\([^)]*\)/g, '').replace(/[0-9.]+$/, '').trim())
+        .map(cleanDishName)
         .filter(Boolean)
         .slice(0, 6);
       bodyHtml = `
