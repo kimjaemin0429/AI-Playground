@@ -485,7 +485,7 @@
         <div class="field-row">
           <button class="btn btn-green" onclick="searchMeal()">이번주 급식 보기</button>
         </div>
-        <div class="hint">NEIS 급식식단정보 API 연동 (자체 서버 프록시 경유) · 정확한 학교 전체 이름을 입력해 주세요 · 오늘이 속한 주(월~금)를 한번에 보여줘요</div>
+        <div class="hint">정확한 학교 전체 이름을 입력해 주세요 · 오늘이 속한 주(월~금)를 한번에 보여줘요</div>
         <div id="mealResult"></div>
       </div>
     </section>
@@ -535,7 +535,7 @@
 
   <footer>
     만든이: 대디랩스 · 공공데이터포털 Open API 활용
-    <br><span class="mock-flag">급식: 실제 API 연동 · 도서: 샘플(목업) 데이터</span>
+    <br><span class="mock-flag">급식: 실제 API 연동 · 도서: 실제 API 연동</span>
   </footer>
 </div>
 
@@ -1003,7 +1003,7 @@ async function searchMeal(){
 
   const days = getWeekMonToFri(date); // 월~금 Date 배열
 
-  resultEl.innerHTML = loadingNote('이번주 메뉴 확인중');
+  resultEl.innerHTML = loadingNote('이번주 메뉴 확인중이야♡');
 
   if(CONFIG.USE_MOCK_MEAL){
     setTimeout(() => {
