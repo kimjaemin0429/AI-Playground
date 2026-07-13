@@ -280,7 +280,7 @@
           <input type="date" id="mealDate" />
           <button class="btn btn-green" onclick="searchMeal()">🍽️ 급식 보기</button>
         </div>
-        <div class="hint">NEIS 나이스 급식식단정보 API 실제 연동 중 (샘플 키) · 정확한 학교 전체 이름을 입력해 주세요</div>
+        <div class="hint">NEIS 급식식단정보 API 연동 (자체 서버 프록시 경유) · 정확한 학교 전체 이름을 입력해 주세요</div>
         <div id="mealResult"></div>
       </div>
     </section>
@@ -310,24 +310,16 @@
    ============================================================ */
 const CONFIG = {
   LIBRARY_API_KEY: '',   // 도서관정보나루(data4library.kr) 인증키 - 아직 미발급
-  NEIS_API_KEY: 'f74bba4541c947008a45917f53635a1e',   // 나이스 급식식단정보 API 인증키 (샘플용 키, 출시 시 교체 예정)
-
   USE_MOCK_LIBRARY: true,   // 도서관 키 발급되면 false 로 변경
-  USE_MOCK_MEAL: false,     // 급식은 실제 API 연동됨
-
   LIBRARY_BASE_URL: 'https://data4library.kr/api/srchBooks',
-  NEIS_SCHOOL_URL: 'https://open.neis.go.kr/hub/schoolInfo',
-  NEIS_MEAL_URL: 'https://open.neis.go.kr/hub/mealServiceDietInfo',
 
-  // NEIS가 브라우저 직접 호출(CORS)을 막고 있어서, 샘플 확인용으로 공개 프록시를 임시로 씁니다.
-  // 출시 전에는 본인 Vercel 프록시 주소로 바꾸고 USE_CORS_PROXY 를 false 로 변경하세요.
-  USE_CORS_PROXY: true,
-  CORS_PROXY_PREFIX: 'https://api.allorigins.win/raw?url='
+  // 급식/학교 조회는 이제 우리 Vercel 프로젝트의 /api/neis 를 통해서만 호출합니다.
+  // - CORS 문제 없음 (같은 도메인)
+  // - API 키는 서버(Vercel 환경변수)에만 있고 브라우저에는 절대 노출되지 않음
+  USE_MOCK_MEAL: false,
+  NEIS_SCHOOL_URL: '/api/neis?path=schoolInfo',
+  NEIS_MEAL_URL: '/api/neis?path=mealServiceDietInfo'
 };
-
-function withCorsProxy(url){
-  return CONFIG.USE_CORS_PROXY ? (CONFIG.CORS_PROXY_PREFIX + encodeURIComponent(url)) : url;
-}
 
 // 오늘 날짜 기본값 세팅
 document.getElementById('mealDate').value = new Date().toISOString().slice(0,10);
@@ -396,8 +388,8 @@ async function fetchSchoolSuggestions(q){
   const mySeq = ++suggestAbortSeq;
 
   try{
-    const url = `${CONFIG.NEIS_SCHOOL_URL}?KEY=${CONFIG.NEIS_API_KEY}&Type=json&ATPT_OFCDC_SC_CODE=${officeCode}&SCHUL_NM=${encodeURIComponent(q)}&pSize=8`;
-    const res = await fetch(withCorsProxy(url));
+    const url = `${CONFIG.NEIS_SCHOOL_URL}&ATPT_OFCDC_SC_CODE=${officeCode}&SCHUL_NM=${encodeURIComponent(q)}&pSize=8`;
+    const res = await fetch(url);
     if(mySeq !== suggestAbortSeq) return; // 더 최신 입력이 있으면 이 응답은 버림
     if(!res.ok) throw new Error('http-' + res.status);
     const data = await res.json();
@@ -418,8 +410,8 @@ async function fetchSchoolSuggestions(q){
     list.classList.add('show');
   } catch(err){
     console.error(err);
-    // 자동완성은 실패해도 조용히 넘어가고, 검색 버튼으로 재시도 가능
-    hideSuggestions();
+    list.innerHTML = `<li class="suggest-empty">😥 검색 중 오류가 발생했어요. 다시 시도해 주세요.</li>`;
+    list.classList.add('show');
   }
 }
 
@@ -550,8 +542,8 @@ async function searchMeal(){
 
     if(!schulCode){
       // 자동완성으로 고르지 않고 직접 입력 후 바로 버튼을 누른 경우 - 여기서 조회
-      const schoolUrl = `${CONFIG.NEIS_SCHOOL_URL}?KEY=${CONFIG.NEIS_API_KEY}&Type=json&ATPT_OFCDC_SC_CODE=${officeCode}&SCHUL_NM=${encodeURIComponent(schoolName)}`;
-      const schoolRes = await fetch(withCorsProxy(schoolUrl));
+      const schoolUrl = `${CONFIG.NEIS_SCHOOL_URL}&ATPT_OFCDC_SC_CODE=${officeCode}&SCHUL_NM=${encodeURIComponent(schoolName)}`;
+      const schoolRes = await fetch(schoolUrl);
       if(!schoolRes.ok) throw new Error('school-http-' + schoolRes.status);
       const schoolData = await schoolRes.json();
       const schoolRows = schoolData.schoolInfo?.[1]?.row || [];
@@ -566,8 +558,8 @@ async function searchMeal(){
 
     // 2단계: 학교코드로 급식 정보 조회
     const ymd = date.replaceAll('-', '');
-    const mealUrl = `${CONFIG.NEIS_MEAL_URL}?KEY=${CONFIG.NEIS_API_KEY}&Type=json&ATPT_OFCDC_SC_CODE=${officeCode}&SD_SCHUL_CODE=${schulCode}&MLSV_YMD=${ymd}`;
-    const mealRes = await fetch(withCorsProxy(mealUrl));
+    const mealUrl = `${CONFIG.NEIS_MEAL_URL}&ATPT_OFCDC_SC_CODE=${officeCode}&SD_SCHUL_CODE=${schulCode}&MLSV_YMD=${ymd}`;
+    const mealRes = await fetch(mealUrl);
     if(!mealRes.ok) throw new Error('meal-http-' + mealRes.status);
     const mealData = await mealRes.json();
     const mealRows = mealData.mealServiceDietInfo?.[1]?.row || [];
@@ -590,7 +582,7 @@ async function searchMeal(){
       <div class="status">
         <span class="big-emoji">😥</span>
         급식 정보를 불러오지 못했어요.<br>
-        <span style="font-size:12px;">(브라우저 보안정책(CORS)으로 막혔을 수 있어요. 이 경우 Vercel 프록시를 하나 두면 해결돼요.)</span>
+        <span style="font-size:12px;">(서버 연결 문제일 수 있어요. 잠시 후 다시 시도해 주세요.)</span>
       </div>`;
   }
 }
