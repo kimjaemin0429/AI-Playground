@@ -823,6 +823,8 @@ function loadingNote(label){
     </div>`;
 }
 
+let bookAvailCache = {}; // isbn13 -> { hasBook, loanAvailable }
+
 async function doLibrarySearch(){
   const keyword = document.getElementById('libSearchInput').value.trim();
   const resultEl = document.getElementById('libSearchResult');
@@ -832,58 +834,47 @@ async function doLibrarySearch(){
     return;
   }
 
+  bookAvailCache = {};
   resultEl.innerHTML = loadingNote('책 찾는 중');
   document.getElementById('libExistResult').innerHTML = '';
   document.getElementById('libResetBtn').style.display = 'none';
 
+  let books = [];
   try{
     const url = `${CONFIG.LIBRARY_SEARCH_URL}&title=${encodeURIComponent(keyword)}&pageSize=8&pageNo=1`;
     const res = await fetch(url);
     if(!res.ok) throw new Error('search-http-' + res.status);
     const data = await res.json();
     const docs = data?.response?.docs || [];
-    const books = docs.map(d => d.doc).filter(Boolean);
-    renderLibraryBooks(books, keyword);
+    books = docs.map(d => d.doc).filter(Boolean);
   } catch(err){
     console.error(err);
     resultEl.innerHTML = `<div class="status">책을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</div>`;
+    return;
   }
-}
 
-let bookAvailCache = {}; // isbn13 -> { hasBook, loanAvailable }
-
-function renderLibraryBooks(books, keyword){
-  const resultEl = document.getElementById('libSearchResult');
   if(!books.length){
     resultEl.innerHTML = `<div class="no-result">'${keyword}' 책을 찾지 못했어요. 다른 이름으로 찾아보세요.</div>`;
     return;
   }
-  bookAvailCache = {};
-  resultEl.innerHTML = `
-    <div class="book-list">
-      ${books.map((b, i) => {
-        const cover = b.bookImageURL
-          ? `<img class="book-cover" src="${b.bookImageURL}" alt="" onerror="this.outerHTML='<div class=book-cover-ph></div>'">`
-          : `<div class="book-cover-ph"></div>`;
-        return `
-        <div class="book-card clickable" style="animation-delay:${i*0.06}s" onclick='checkBookExist(${JSON.stringify(b.isbn13)}, ${JSON.stringify(b.bookname)})'>
-          ${cover}
-          <div class="book-info">
-            <div class="title">${b.bookname}</div>
-            <div class="meta">${b.authors || ''}</div>
-            <span class="avail-badge" id="avail-${i}">확인중</span>
-          </div>
-        </div>`;
-      }).join('')}
-    </div>`;
 
-  // 목록에 뜨자마자 책마다 대출가능여부를 미리 조회해서 뱃지로 보여줌
-  books.forEach((b, i) => loadAvailabilityBadge(b.isbn13, i));
+  // 이 도서관에 있는지 여부를 책마다 먼저 다 확인한 다음, "없음"은 걸러내고 한 번에 보여줌
+  resultEl.innerHTML = loadingNote('이 도서관에 있는지 확인 중');
+
+  await Promise.all(books.map(b => fetchAvailability(b.isbn13)));
+
+  const availableBooks = books.filter(b => bookAvailCache[b.isbn13]?.hasBook !== 'N');
+
+  if(!availableBooks.length){
+    resultEl.innerHTML = `<div class="no-result">'${keyword}' 책은 있지만, 이 도서관엔 소장된 책이 없어요.</div>`;
+    return;
+  }
+
+  renderLibraryBooks(availableBooks, keyword);
 }
 
-async function loadAvailabilityBadge(isbn13, idx){
-  const badge = document.getElementById('avail-' + idx);
-  if(!badge) return;
+async function fetchAvailability(isbn13){
+  if(bookAvailCache[isbn13]) return; // 이미 조회한 책이면 재조회하지 않음
   try{
     const url = `${CONFIG.LIBRARY_EXIST_URL}&libCode=${selectedLibCode}&isbn13=${encodeURIComponent(isbn13)}`;
     const res = await fetch(url);
@@ -891,28 +882,41 @@ async function loadAvailabilityBadge(isbn13, idx){
     const data = await res.json();
     const r = data?.response?.result;
     bookAvailCache[isbn13] = { hasBook: r?.hasBook, loanAvailable: r?.loanAvailable };
-    setAvailBadge(badge, r?.hasBook, r?.loanAvailable);
   } catch(err){
     console.error(err);
-    badge.textContent = '확인 불가';
-    badge.className = 'avail-badge avail-err';
+    // 확인 실패한 책은 "없음"으로 단정짓지 않고 목록엔 남겨둠 (상태만 확인불가로 표시)
+    bookAvailCache[isbn13] = { hasBook: 'ERR', loanAvailable: null };
   }
 }
 
-function setAvailBadge(badge, hasBook, loanAvail){
-  if(hasBook === 'Y' && loanAvail === 'Y'){
-    badge.textContent = '대출 가능';
-    badge.className = 'avail-badge avail-ok';
-  } else if(hasBook === 'Y' && loanAvail === 'N'){
-    badge.textContent = '대출중';
-    badge.className = 'avail-badge avail-wait';
-  } else if(hasBook === 'N'){
-    badge.textContent = '없음';
-    badge.className = 'avail-badge avail-none';
-  } else {
-    badge.textContent = '확인 불가';
-    badge.className = 'avail-badge avail-err';
-  }
+function renderLibraryBooks(books, keyword){
+  const resultEl = document.getElementById('libSearchResult');
+  resultEl.innerHTML = `
+    <div class="book-list">
+      ${books.map((b, i) => {
+        const cover = b.bookImageURL
+          ? `<img class="book-cover" src="${b.bookImageURL}" alt="" onerror="this.outerHTML='<div class=book-cover-ph></div>'">`
+          : `<div class="book-cover-ph"></div>`;
+        const cached = bookAvailCache[b.isbn13];
+        const badgeInfo = getAvailBadgeInfo(cached?.hasBook, cached?.loanAvailable);
+        return `
+        <div class="book-card clickable" style="animation-delay:${i*0.06}s" onclick='checkBookExist(${JSON.stringify(b.isbn13)}, ${JSON.stringify(b.bookname)})'>
+          ${cover}
+          <div class="book-info">
+            <div class="title">${b.bookname}</div>
+            <div class="meta">${b.authors || ''}</div>
+            <span class="avail-badge ${badgeInfo.cls}">${badgeInfo.text}</span>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+function getAvailBadgeInfo(hasBook, loanAvail){
+  if(hasBook === 'Y' && loanAvail === 'Y') return { text:'대출 가능', cls:'avail-ok' };
+  if(hasBook === 'Y' && loanAvail === 'N') return { text:'대출중', cls:'avail-wait' };
+  if(hasBook === 'N') return { text:'없음', cls:'avail-none' };
+  return { text:'확인 불가', cls:'avail-err' };
 }
 
 async function checkBookExist(isbn13, bookName){
