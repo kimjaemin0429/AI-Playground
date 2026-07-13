@@ -255,6 +255,22 @@
     background: #EEF2F6; color: var(--purple); padding:3px 8px; border-radius:6px; font-weight:700;
   }
 
+  .avail-badge{
+    display:inline-block;
+    margin-top: 5px;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    color: var(--muted);
+    background: var(--paper);
+  }
+  .avail-badge.avail-ok{ border-color: var(--green); color: var(--green); background: rgba(94,155,130,0.1); }
+  .avail-badge.avail-wait{ border-color: var(--yellow); color: var(--yellow); background: rgba(185,141,91,0.12); }
+  .avail-badge.avail-none{ border-color: var(--purple); color: var(--purple); background: rgba(74,101,114,0.08); }
+  .avail-badge.avail-err{ border-color: var(--coral); color: var(--coral); background: rgba(201,123,92,0.1); }
+
   @keyframes slideIn{ from{ opacity:0; transform: translateX(-6px);} to{ opacity:1; transform: translateX(0);} }
 
   .book-card.clickable{ cursor:pointer; transition: border-color .15s ease, background .15s ease, transform .15s ease; }
@@ -834,12 +850,15 @@ async function doLibrarySearch(){
   }
 }
 
+let bookAvailCache = {}; // isbn13 -> { hasBook, loanAvailable }
+
 function renderLibraryBooks(books, keyword){
   const resultEl = document.getElementById('libSearchResult');
   if(!books.length){
     resultEl.innerHTML = `<div class="no-result">'${keyword}' 책을 찾지 못했어요. 다른 이름으로 찾아보세요.</div>`;
     return;
   }
+  bookAvailCache = {};
   resultEl.innerHTML = `
     <div class="book-list">
       ${books.map((b, i) => {
@@ -852,16 +871,63 @@ function renderLibraryBooks(books, keyword){
           <div class="book-info">
             <div class="title">${b.bookname}</div>
             <div class="meta">${b.authors || ''}</div>
+            <span class="avail-badge" id="avail-${i}">확인중</span>
           </div>
         </div>`;
       }).join('')}
     </div>`;
+
+  // 목록에 뜨자마자 책마다 대출가능여부를 미리 조회해서 뱃지로 보여줌
+  books.forEach((b, i) => loadAvailabilityBadge(b.isbn13, i));
+}
+
+async function loadAvailabilityBadge(isbn13, idx){
+  const badge = document.getElementById('avail-' + idx);
+  if(!badge) return;
+  try{
+    const url = `${CONFIG.LIBRARY_EXIST_URL}&libCode=${selectedLibCode}&isbn13=${encodeURIComponent(isbn13)}`;
+    const res = await fetch(url);
+    if(!res.ok) throw new Error('avail-http-' + res.status);
+    const data = await res.json();
+    const r = data?.response?.result;
+    bookAvailCache[isbn13] = { hasBook: r?.hasBook, loanAvailable: r?.loanAvailable };
+    setAvailBadge(badge, r?.hasBook, r?.loanAvailable);
+  } catch(err){
+    console.error(err);
+    badge.textContent = '확인 불가';
+    badge.className = 'avail-badge avail-err';
+  }
+}
+
+function setAvailBadge(badge, hasBook, loanAvail){
+  if(hasBook === 'Y' && loanAvail === 'Y'){
+    badge.textContent = '대출 가능';
+    badge.className = 'avail-badge avail-ok';
+  } else if(hasBook === 'Y' && loanAvail === 'N'){
+    badge.textContent = '대출중';
+    badge.className = 'avail-badge avail-wait';
+  } else if(hasBook === 'N'){
+    badge.textContent = '없음';
+    badge.className = 'avail-badge avail-none';
+  } else {
+    badge.textContent = '확인 불가';
+    badge.className = 'avail-badge avail-err';
+  }
 }
 
 async function checkBookExist(isbn13, bookName){
   const resultEl = document.getElementById('libExistResult');
   document.getElementById('libResetBtn').style.display = 'none';
   goToWizardStep(3);
+
+  // 목록에서 이미 조회해둔 결과가 있으면 재조회 없이 바로 보여줌
+  const cached = bookAvailCache[isbn13];
+  if(cached){
+    showLibraryResult(bookName, cached.hasBook, cached.loanAvailable);
+    document.getElementById('libResetBtn').style.display = 'block';
+    return;
+  }
+
   resultEl.innerHTML = loadingNote('대출 가능 여부 확인 중');
 
   try{
@@ -870,6 +936,7 @@ async function checkBookExist(isbn13, bookName){
     if(!res.ok) throw new Error('exist-http-' + res.status);
     const data = await res.json();
     const r = data?.response?.result;
+    bookAvailCache[isbn13] = { hasBook: r?.hasBook, loanAvailable: r?.loanAvailable };
     showLibraryResult(bookName, r?.hasBook, r?.loanAvailable);
   } catch(err){
     console.error(err);
