@@ -226,6 +226,7 @@
   .book-list{ display:flex; flex-direction:column; gap:10px; margin-top:14px; }
   .book-card{
     display:flex;
+    align-items:center;
     border: 1.5px solid var(--line);
     border-radius: 12px;
     overflow:hidden;
@@ -235,7 +236,17 @@
   .book-spine{
     width: 8px;
     flex-shrink:0;
+    align-self:stretch;
   }
+  .book-cover, .book-cover-ph{
+    width: 40px;
+    height: 54px;
+    flex-shrink: 0;
+    border-radius: 6px;
+    margin: 8px 0 8px 10px;
+  }
+  .book-cover{ object-fit: cover; background: var(--line); }
+  .book-cover-ph{ background: var(--line); }
   .book-info{ padding: 10px 14px; }
   .book-info .title{ font-weight:700; font-size:14.5px; margin-bottom:3px; }
   .book-info .meta{ font-size:12px; color: var(--muted); }
@@ -831,15 +842,19 @@ function renderLibraryBooks(books, keyword){
   }
   resultEl.innerHTML = `
     <div class="book-list">
-      ${books.map((b, i) => `
+      ${books.map((b, i) => {
+        const cover = b.bookImageURL
+          ? `<img class="book-cover" src="${b.bookImageURL}" alt="" onerror="this.outerHTML='<div class=book-cover-ph></div>'">`
+          : `<div class="book-cover-ph"></div>`;
+        return `
         <div class="book-card clickable" style="animation-delay:${i*0.06}s" onclick='checkBookExist(${JSON.stringify(b.isbn13)}, ${JSON.stringify(b.bookname)})'>
-          <div class="book-spine" style="background:var(--green)"></div>
+          ${cover}
           <div class="book-info">
             <div class="title">${b.bookname}</div>
             <div class="meta">${b.authors || ''}</div>
           </div>
-        </div>
-      `).join('')}
+        </div>`;
+      }).join('')}
     </div>`;
 }
 
