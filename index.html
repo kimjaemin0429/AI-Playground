@@ -134,6 +134,24 @@
 
   .hint{ font-size: 12px; color: var(--muted); margin: 6px 2px 0; line-height:1.5; }
 
+  .recent-wrap{ display:none; margin: -4px 0 12px; }
+  .recent-wrap.show{ display:block; }
+  .recent-label{ font-size: 11.5px; color: var(--muted); margin-bottom: 6px; }
+  .recent-chips{ display:flex; flex-wrap:wrap; gap:6px; }
+  .recent-chip{
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 12.5px;
+    padding: 6px 12px;
+    border: 1.5px solid var(--line);
+    border-radius: 999px;
+    background: #EEF3EF;
+    color: var(--ink);
+    cursor: pointer;
+    transition: border-color .15s ease, background .15s ease;
+  }
+  .recent-chip:hover{ border-color: var(--green); background: rgba(94,155,130,0.12); }
+  .recent-chip:active{ transform: scale(.97); }
+
   .autocomplete-wrap{ position: relative; }
   .suggest-list{
     list-style:none;
@@ -317,6 +335,7 @@
           <input type="hidden" id="selectedSchulCode" value="" />
           <ul id="schoolSuggestions" class="suggest-list"></ul>
         </div>
+        <div id="recentSchools" class="recent-wrap"></div>
         <input type="date" id="mealDate" style="display:none" />
         <div class="field-row">
           <button class="btn btn-green" onclick="searchMeal()">이번주 급식 보기</button>
@@ -451,7 +470,7 @@ async function fetchSchoolSuggestions(q){
     list.classList.add('show');
   } catch(err){
     console.error(err);
-    list.innerHTML = `<li class="suggest-empty">😥 검색 중 오류가 발생했어요. 다시 시도해 주세요.</li>`;
+    list.innerHTML = `<li class="suggest-empty">검색 중 오류가 발생했어요. 다시 시도해 주세요.</li>`;
     list.classList.add('show');
   }
 }
@@ -461,6 +480,65 @@ function pickSchool(schulCode, schoolName){
   document.getElementById('selectedSchulCode').value = schulCode;
   hideSuggestions();
 }
+
+/* ---------------- 최근 검색한 학교 (최대 5개, 브라우저에 저장) ---------------- */
+const RECENT_SCHOOLS_KEY = 'dl_recent_schools_v1';
+
+function loadRecentSchools(){
+  try{
+    const raw = localStorage.getItem(RECENT_SCHOOLS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch(err){
+    return [];
+  }
+}
+
+function saveRecentSchool(code, name, officeCode, officeName){
+  try{
+    let list = loadRecentSchools();
+    list = list.filter(x => x.code !== code); // 중복 제거 후 맨 앞으로
+    list.unshift({ code, name, officeCode, officeName });
+    list = list.slice(0, 5);
+    localStorage.setItem(RECENT_SCHOOLS_KEY, JSON.stringify(list));
+    renderRecentSchools();
+  } catch(err){
+    console.error(err);
+  }
+}
+
+function renderRecentSchools(){
+  const wrap = document.getElementById('recentSchools');
+  const list = loadRecentSchools();
+
+  if(!list.length){
+    wrap.classList.remove('show');
+    wrap.innerHTML = '';
+    return;
+  }
+
+  wrap.innerHTML = `
+    <div class="recent-label">최근 검색한 학교</div>
+    <div class="recent-chips">
+      ${list.map(x => `
+        <button type="button" class="recent-chip" onclick="selectRecentSchool('${x.code}')">${x.name}</button>
+      `).join('')}
+    </div>
+  `;
+  wrap.classList.add('show');
+}
+
+// 최근 검색 칩을 누르면 입력 없이 바로 그 학교로 조회
+function selectRecentSchool(code){
+  const item = loadRecentSchools().find(x => x.code === code);
+  if(!item) return;
+  document.getElementById('officeSelect').value = item.officeCode;
+  document.getElementById('schoolNameInput').value = item.name;
+  document.getElementById('selectedSchulCode').value = item.code;
+  hideSuggestions();
+  searchMeal();
+}
+
+renderRecentSchools(); // 페이지 로드 시 저장된 최근 검색 목록 표시
 
 /* ---------------- 탭 전환 ---------------- */
 function switchTab(tab){
@@ -535,11 +613,11 @@ function searchBooks(){
   const resultEl = document.getElementById('bookResult');
 
   if(!keyword){
-    resultEl.innerHTML = `<div class="status"><span class="big-emoji">🐥</span>찾고 싶은 책 제목이나 낱말을 입력해 주세요!</div>`;
+    resultEl.innerHTML = `<div class="status">찾고 싶은 책 제목이나 낱말을 입력해 주세요!</div>`;
     return;
   }
 
-  resultEl.innerHTML = `<div class="status"><span class="big-emoji">🔎</span>책을 찾고 있어요...</div>`;
+  resultEl.innerHTML = `<div class="status">책을 찾고 있어요...</div>`;
 
   if(CONFIG.USE_MOCK_LIBRARY){
     setTimeout(() => renderBooks(MOCK_BOOKS, keyword), 500);
@@ -561,7 +639,7 @@ function searchBooks(){
       renderBooks(books, keyword);
     })
     .catch(() => {
-      resultEl.innerHTML = `<div class="status"><span class="big-emoji">😥</span>책을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</div>`;
+      resultEl.innerHTML = `<div class="status">책을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</div>`;
     });
   ------------------------------------------------------------- */
 }
@@ -569,7 +647,7 @@ function searchBooks(){
 function renderBooks(books, keyword){
   const resultEl = document.getElementById('bookResult');
   if(!books.length){
-    resultEl.innerHTML = `<div class="status"><span class="big-emoji">📭</span>'${keyword}' 관련 책을 찾지 못했어요.</div>`;
+    resultEl.innerHTML = `<div class="status">'${keyword}' 관련 책을 찾지 못했어요.</div>`;
     return;
   }
   resultEl.innerHTML = `
@@ -597,16 +675,19 @@ async function searchMeal(){
   const resultEl = document.getElementById('mealResult');
 
   if(!schoolName){
-    resultEl.innerHTML = `<div class="status"><span class="big-emoji">🏫</span>학교 이름을 입력해 주세요!</div>`;
+    resultEl.innerHTML = `<div class="status">학교 이름을 입력해 주세요!</div>`;
     return;
   }
 
   const days = getWeekMonToFri(date); // 월~금 Date 배열
 
-  resultEl.innerHTML = `<div class="status"><span class="big-emoji">🍽️</span>${officeName}에서 '${schoolName}'의 이번주 급식을 확인하고 있어요...</div>`;
+  resultEl.innerHTML = `<div class="status">${officeName}에서 '${schoolName}'의 이번주 급식을 확인하고 있어요...</div>`;
 
   if(CONFIG.USE_MOCK_MEAL){
-    setTimeout(() => renderWeekMeal(days, buildMockWeekData(schoolName, days), schoolName, officeName), 500);
+    setTimeout(() => {
+      saveRecentSchool(schoolName, schoolName, officeCode, officeName);
+      renderWeekMeal(days, buildMockWeekData(schoolName, days), schoolName, officeName);
+    }, 500);
     return;
   }
 
@@ -623,12 +704,15 @@ async function searchMeal(){
       const schoolRows = schoolData.schoolInfo?.[1]?.row || [];
 
       if(!schoolRows.length){
-        resultEl.innerHTML = `<div class="status"><span class="big-emoji">🔍</span>'${schoolName}' 학교를 ${officeName}에서 찾지 못했어요. 이름을 다시 확인해 주세요.</div>`;
+        resultEl.innerHTML = `<div class="status">'${schoolName}' 학교를 ${officeName}에서 찾지 못했어요. 이름을 다시 확인해 주세요.</div>`;
         return;
       }
       schulCode = schoolRows[0].SD_SCHUL_CODE;
       fullName = schoolRows[0].SCHUL_NM;
     }
+
+    // 학교를 정상적으로 찾았으니 최근 검색 목록에 저장
+    saveRecentSchool(schulCode, fullName, officeCode, officeName);
 
     // 2단계: 학교코드로 이번주(월~금) 급식 정보 한 번에 조회
     const fromYmd = toYmd(days[0]);
@@ -654,7 +738,6 @@ async function searchMeal(){
     console.error(err);
     resultEl.innerHTML = `
       <div class="status">
-        <span class="big-emoji">😥</span>
         급식 정보를 불러오지 못했어요.<br>
         <span style="font-size:12px;">(서버 연결 문제일 수 있어요. 잠시 후 다시 시도해 주세요.)</span>
       </div>`;
