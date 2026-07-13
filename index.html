@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>공공데이터 놀이터 - 책 찾기 & 급식 보기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #FFF9EC;
+    --paper: #FFFFFF;
+    --ink: #2B2D42;
+    --coral: #FF6F61;
+    --yellow: #FFC93C;
+    --sky: #4EA8DE;
+    --green: #6BCB77;
+    --purple: #9B8AFB;
+    --line: #EDE3CC;
+    --shadow: 0 6px 0 rgba(43,45,66,0.12);
+  }
+  *{ box-sizing: border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background: var(--bg);
+    background-image:
+      radial-gradient(circle at 8% 12%, rgba(255,201,60,0.18) 0, transparent 40%),
+      radial-gradient(circle at 92% 85%, rgba(78,168,222,0.18) 0, transparent 40%);
+    font-family: 'Noto Sans KR', sans-serif;
+    color: var(--ink);
+    min-height: 100vh;
+  }
+  .app{
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 20px 16px 60px;
+  }
+  header{
+    text-align: center;
+    padding: 18px 10px 22px;
+  }
+  header .mascot{ font-size: 40px; display:block; margin-bottom: 4px; }
+  header h1{
+    font-family: 'Jua', sans-serif;
+    font-size: 28px;
+    margin: 0 0 6px;
+    color: var(--ink);
+    letter-spacing: -0.5px;
+  }
+  header p{
+    margin:0;
+    font-size: 14px;
+    color: #6b6f8f;
+  }
+
+  /* 탭: 색인 카드(인덱스 탭) 느낌 */
+  .tabs{
+    display:flex;
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+  .tab-btn{
+    flex:1;
+    font-family: 'Jua', sans-serif;
+    font-size: 16px;
+    padding: 14px 8px;
+    border: 3px solid var(--ink);
+    border-radius: 16px 16px 8px 8px;
+    background: var(--paper);
+    color: var(--ink);
+    cursor: pointer;
+    box-shadow: var(--shadow);
+    transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
+  }
+  .tab-btn:active{ transform: translateY(3px); box-shadow: 0 2px 0 rgba(43,45,66,0.12); }
+  .tab-btn.active{ background: var(--yellow); }
+  .tab-btn[data-tab="meal"].active{ background: var(--sky); color: white; }
+
+  .tab-panel{ display:none; animation: pop .25s ease; }
+  .tab-panel.active{ display:block; }
+  @keyframes pop{ from{ opacity:0; transform: scale(.97); } to{ opacity:1; transform: scale(1); } }
+
+  .card{
+    background: var(--paper);
+    border: 3px solid var(--ink);
+    border-radius: 18px;
+    padding: 18px;
+    box-shadow: var(--shadow);
+  }
+
+  .field-row{ display:flex; gap:8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .field-row > *{ flex:1; min-width: 120px; }
+
+  input[type="text"], input[type="date"], select{
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 15px;
+    padding: 12px 12px;
+    border: 2px solid var(--line);
+    border-radius: 12px;
+    background: #FFFDF7;
+    color: var(--ink);
+    outline: none;
+  }
+  input:focus, select:focus{ border-color: var(--sky); }
+
+  .btn{
+    font-family: 'Jua', sans-serif;
+    font-size: 15px;
+    padding: 12px 18px;
+    border: 3px solid var(--ink);
+    border-radius: 12px;
+    cursor: pointer;
+    box-shadow: 0 4px 0 rgba(43,45,66,0.15);
+    transition: transform .1s ease;
+    white-space: nowrap;
+  }
+  .btn:active{ transform: translateY(3px); box-shadow: none; }
+  .btn-coral{ background: var(--coral); color: white; }
+  .btn-green{ background: var(--green); color: white; }
+
+  .hint{ font-size: 12.5px; color: #8a8fb0; margin: 6px 2px 0; }
+
+  .autocomplete-wrap{ position: relative; }
+  .suggest-list{
+    list-style:none;
+    margin:0; padding:0;
+    position:absolute;
+    top: calc(100% + 4px);
+    left:0; right:0;
+    background: #FFFDF7;
+    border: 2px solid var(--ink);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    max-height: 220px;
+    overflow-y:auto;
+    z-index: 20;
+    display:none;
+  }
+  .suggest-list.show{ display:block; }
+  .suggest-list li{
+    padding: 10px 14px;
+    font-size: 14px;
+    cursor:pointer;
+    border-bottom: 1px solid var(--line);
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:8px;
+  }
+  .suggest-list li:last-child{ border-bottom:none; }
+  .suggest-list li:hover, .suggest-list li.active{ background: #FFF3D6; }
+  .suggest-list li .s-name{ font-weight:700; }
+  .suggest-list li .s-kind{ font-size:11.5px; color:#8a8fb0; flex-shrink:0; }
+  .suggest-list li.suggest-empty{ color:#9a9ec2; cursor:default; }
+  .suggest-list li.suggest-empty:hover{ background:none; }
+
+  .status{
+    text-align:center;
+    padding: 26px 10px;
+    font-size: 14.5px;
+    color: #6b6f8f;
+  }
+  .status .big-emoji{ font-size: 34px; display:block; margin-bottom:8px; }
+
+  /* 책 결과: 책장/책등 느낌 */
+  .book-list{ display:flex; flex-direction:column; gap:10px; margin-top:14px; }
+  .book-card{
+    display:flex;
+    border: 2px solid var(--ink);
+    border-radius: 12px;
+    overflow:hidden;
+    background:#FFFDF7;
+    animation: slideIn .3s ease both;
+  }
+  .book-spine{
+    width: 14px;
+    flex-shrink:0;
+  }
+  .book-info{ padding: 10px 14px; }
+  .book-info .title{ font-weight:700; font-size:15.5px; margin-bottom:3px; }
+  .book-info .meta{ font-size:12.5px; color:#7a7f9e; }
+  .book-info .badge{
+    display:inline-block; margin-top:6px; font-size:11.5px;
+    background: #F1EEFF; color:#5B4FCF; padding:3px 8px; border-radius:8px; font-weight:700;
+  }
+
+  @keyframes slideIn{ from{ opacity:0; transform: translateX(-8px);} to{ opacity:1; transform: translateX(0);} }
+
+  /* 급식: 식판 트레이 시그니처 */
+  .tray-wrap{ margin-top:16px; }
+  .tray{
+    background: #DCE7EA;
+    border: 4px solid var(--ink);
+    border-radius: 22px;
+    padding: 14px;
+    display:grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 10px;
+    box-shadow: inset 0 3px 10px rgba(0,0,0,0.12), var(--shadow);
+  }
+  .tray-slot{
+    background: var(--paper);
+    border: 2px solid var(--ink);
+    border-radius: 14px;
+    min-height: 78px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    padding: 6px 4px;
+    font-size: 12.5px;
+    font-weight: 700;
+    line-height:1.3;
+    opacity:0;
+    animation: fillTray .35s ease forwards;
+  }
+  .tray-slot .icon{ font-size: 20px; margin-bottom:4px; }
+  .tray-slot:nth-child(1){ animation-delay: .05s; }
+  .tray-slot:nth-child(2){ animation-delay: .12s; }
+  .tray-slot:nth-child(3){ animation-delay: .19s; }
+  .tray-slot:nth-child(4){ animation-delay: .26s; }
+  .tray-slot:nth-child(5){ animation-delay: .33s; }
+  .tray-slot:nth-child(6){ animation-delay: .40s; }
+  @keyframes fillTray{ from{ opacity:0; transform: scale(.8);} to{ opacity:1; transform: scale(1);} }
+
+  .meal-date-label{
+    font-family:'Jua', sans-serif;
+    text-align:center;
+    font-size:16px;
+    margin: 2px 0 4px;
+  }
+
+  footer{
+    text-align:center;
+    margin-top: 26px;
+    font-size: 11.5px;
+    color:#a8ac c8;
+    color:#9a9ec2;
+  }
+  .mock-flag{
+    display:inline-block;
+    margin-top:10px;
+    font-size:11px;
+    background:#FFF3D6;
+    border:1px solid #E9CE85;
+    color:#8a6d1a;
+    padding:4px 10px;
+    border-radius:8px;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <span class="mascot">🐣📖🍚</span>
+    <h1>공공데이터 놀이터</h1>
+    <p>도서관 책도 찾아보고, 오늘 급식도 확인해요!</p>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab-btn active" data-tab="meal" onclick="switchTab('meal')">🍚 급식 보기</button>
+    <button class="tab-btn" data-tab="library" onclick="switchTab('library')">📚 책 찾기</button>
+  </nav>
+
+  <main>
+    <!-- 급식 검색 -->
+    <section id="panel-meal" class="tab-panel active">
+      <div class="card">
+        <div class="field-row">
+          <select id="officeSelect" onchange="onOfficeChange()"></select>
+        </div>
+        <div class="field-row autocomplete-wrap">
+          <input type="text" id="schoolNameInput" placeholder="학교 이름을 입력하세요 (예: 늘봄초등학교)" autocomplete="off" />
+          <input type="hidden" id="selectedSchulCode" value="" />
+          <ul id="schoolSuggestions" class="suggest-list"></ul>
+        </div>
+        <div class="field-row">
+          <input type="date" id="mealDate" />
+          <button class="btn btn-green" onclick="searchMeal()">🍽️ 급식 보기</button>
+        </div>
+        <div class="hint">NEIS 나이스 급식식단정보 API 실제 연동 중 (샘플 키) · 정확한 학교 전체 이름을 입력해 주세요</div>
+        <div id="mealResult"></div>
+      </div>
+    </section>
+
+    <!-- 도서관 도서 검색 -->
+    <section id="panel-library" class="tab-panel">
+      <div class="card">
+        <div class="field-row">
+          <input type="text" id="bookKeyword" placeholder="예: 마법천자문, 공룡, 위인전" />
+          <button class="btn btn-coral" onclick="searchBooks()">🔎 찾기</button>
+        </div>
+        <div class="hint">도서관정보나루 API 연동 예정 · 지금은 샘플 데이터로 보여줘요</div>
+        <div id="bookResult"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    만든이: 대디랩스 🛠️ · 공공데이터포털 Open API 활용
+    <br><span class="mock-flag">급식: 실제 API 연동 · 도서: 샘플(목업) 데이터</span>
+  </footer>
+</div>
+
+<script>
+/* ============================================================
+   CONFIG - API 키가 발급되면 아래에 입력하고 USE_MOCK 을 false 로 바꾸세요.
+   ============================================================ */
+const CONFIG = {
+  LIBRARY_API_KEY: '',   // 도서관정보나루(data4library.kr) 인증키 - 아직 미발급
+  NEIS_API_KEY: 'f74bba4541c947008a45917f53635a1e',   // 나이스 급식식단정보 API 인증키 (샘플용 키, 출시 시 교체 예정)
+
+  USE_MOCK_LIBRARY: true,   // 도서관 키 발급되면 false 로 변경
+  USE_MOCK_MEAL: false,     // 급식은 실제 API 연동됨
+
+  LIBRARY_BASE_URL: 'https://data4library.kr/api/srchBooks',
+  NEIS_SCHOOL_URL: 'https://open.neis.go.kr/hub/schoolInfo',
+  NEIS_MEAL_URL: 'https://open.neis.go.kr/hub/mealServiceDietInfo',
+
+  // NEIS가 브라우저 직접 호출(CORS)을 막고 있어서, 샘플 확인용으로 공개 프록시를 임시로 씁니다.
+  // 출시 전에는 본인 Vercel 프록시 주소로 바꾸고 USE_CORS_PROXY 를 false 로 변경하세요.
+  USE_CORS_PROXY: true,
+  CORS_PROXY_PREFIX: 'https://api.allorigins.win/raw?url='
+};
+
+function withCorsProxy(url){
+  return CONFIG.USE_CORS_PROXY ? (CONFIG.CORS_PROXY_PREFIX + encodeURIComponent(url)) : url;
+}
+
+// 오늘 날짜 기본값 세팅
+document.getElementById('mealDate').value = new Date().toISOString().slice(0,10);
+
+/* ---------------- 시도교육청 코드 (NEIS ATPT_OFCDC_SC_CODE) ---------------- */
+const OFFICE_CODES = [
+  { code:'B10', name:'서울특별시교육청' },
+  { code:'C10', name:'부산광역시교육청' },
+  { code:'D10', name:'대구광역시교육청' },
+  { code:'E10', name:'인천광역시교육청' },
+  { code:'F10', name:'광주광역시교육청' },
+  { code:'G10', name:'대전광역시교육청' },
+  { code:'H10', name:'울산광역시교육청' },
+  { code:'I10', name:'세종특별자치시교육청' },
+  { code:'J10', name:'경기도교육청' },
+  { code:'K10', name:'강원특별자치도교육청' },
+  { code:'M10', name:'충청북도교육청' },
+  { code:'N10', name:'충청남도교육청' },
+  { code:'P10', name:'전북특별자치도교육청' },
+  { code:'Q10', name:'전라남도교육청' },
+  { code:'R10', name:'경상북도교육청' },
+  { code:'S10', name:'경상남도교육청' },
+  { code:'T10', name:'제주특별자치도교육청' },
+];
+const DEFAULT_OFFICE_CODE = 'J10'; // 경기도교육청
+
+(function initOfficeSelect(){
+  const sel = document.getElementById('officeSelect');
+  sel.innerHTML = OFFICE_CODES.map(o =>
+    `<option value="${o.code}" ${o.code === DEFAULT_OFFICE_CODE ? 'selected' : ''}>${o.name}</option>`
+  ).join('');
+})();
+
+/* ---------------- 학교명 자동완성 ---------------- */
+let suggestDebounce = null;
+let suggestAbortSeq = 0;
+
+function onOfficeChange(){
+  // 교육청이 바뀌면 이전 선택/제안 초기화
+  document.getElementById('selectedSchulCode').value = '';
+  hideSuggestions();
+}
+
+document.getElementById('schoolNameInput').addEventListener('input', () => {
+  document.getElementById('selectedSchulCode').value = ''; // 직접 타이핑 중이면 캐시된 코드 무효화
+  clearTimeout(suggestDebounce);
+  const q = document.getElementById('schoolNameInput').value.trim();
+  if(q.length < 2){ hideSuggestions(); return; }
+  suggestDebounce = setTimeout(() => fetchSchoolSuggestions(q), 300);
+});
+
+document.addEventListener('click', (e) => {
+  const wrap = document.querySelector('.autocomplete-wrap');
+  if(wrap && !wrap.contains(e.target)) hideSuggestions();
+});
+
+function hideSuggestions(){
+  const list = document.getElementById('schoolSuggestions');
+  list.classList.remove('show');
+  list.innerHTML = '';
+}
+
+async function fetchSchoolSuggestions(q){
+  const officeCode = document.getElementById('officeSelect').value;
+  const list = document.getElementById('schoolSuggestions');
+  const mySeq = ++suggestAbortSeq;
+
+  try{
+    const url = `${CONFIG.NEIS_SCHOOL_URL}?KEY=${CONFIG.NEIS_API_KEY}&Type=json&ATPT_OFCDC_SC_CODE=${officeCode}&SCHUL_NM=${encodeURIComponent(q)}&pSize=8`;
+    const res = await fetch(withCorsProxy(url));
+    if(mySeq !== suggestAbortSeq) return; // 더 최신 입력이 있으면 이 응답은 버림
+    if(!res.ok) throw new Error('http-' + res.status);
+    const data = await res.json();
+    const rows = data.schoolInfo?.[1]?.row || [];
+
+    if(!rows.length){
+      list.innerHTML = `<li class="suggest-empty">🔍 '${q}' 학교를 찾지 못했어요</li>`;
+      list.classList.add('show');
+      return;
+    }
+
+    list.innerHTML = rows.map(r => `
+      <li onclick="pickSchool('${r.SD_SCHUL_CODE}', '${r.SCHUL_NM.replace(/'/g, "\\'")}')">
+        <span class="s-name">${r.SCHUL_NM}</span>
+        <span class="s-kind">${r.SCHUL_KND_SC_NM || ''}</span>
+      </li>
+    `).join('');
+    list.classList.add('show');
+  } catch(err){
+    console.error(err);
+    // 자동완성은 실패해도 조용히 넘어가고, 검색 버튼으로 재시도 가능
+    hideSuggestions();
+  }
+}
+
+function pickSchool(schulCode, schoolName){
+  document.getElementById('schoolNameInput').value = schoolName;
+  document.getElementById('selectedSchulCode').value = schulCode;
+  hideSuggestions();
+}
+
+/* ---------------- 탭 전환 ---------------- */
+function switchTab(tab){
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + tab).classList.add('active');
+}
+
+/* ---------------- 샘플(목업) 데이터 ---------------- */
+const MOCK_BOOKS = [
+  { title:'마법천자문 1권 - 불꽃 서유기', author:'김미영 글 / 홍거북 그림', publisher:'아울북', color:'coral' },
+  { title:'흔한남매 학습만화 - 지구과학', author:'흔한남매 원작', publisher:'아이세움', color:'sky' },
+  { title:'그리스 로마 신화 1', author:'토마스 불핀치 글', publisher:'삼성출판사', color:'purple' },
+  { title:'who? 세종대왕', author:'이문영 글', publisher:'다산어린이', color:'green' },
+];
+
+const MOCK_MEAL_POOL = [
+  ['차조밥', '순두부찌개', '탕수육', '어묵볶음', '배추김치', '방울토마토'],
+  ['보리밥', '콩나물국', '돈까스&소스', '브로콜리무침', '깍두기', '요구르트'],
+  ['흑미밥', '미역국', '닭갈비', '계란말이', '오이무침', '수박']
+];
+// 학교명 문자열을 기반으로 목업 데이터 풀에서 하나를 고르기 위한 간단한 해시
+function pickMockMeal(schoolName){
+  let sum = 0;
+  for(let i=0;i<schoolName.length;i++) sum += schoolName.charCodeAt(i);
+  return MOCK_MEAL_POOL[sum % MOCK_MEAL_POOL.length];
+}
+const SLOT_META = [
+  {icon:'🍚', label:'밥'},
+  {icon:'🥣', label:'국/찌개'},
+  {icon:'🍖', label:'메인반찬'},
+  {icon:'🥦', label:'반찬'},
+  {icon:'🥬', label:'김치'},
+  {icon:'🍉', label:'후식'}
+];
+const SPINE = { coral:'var(--coral)', sky:'var(--sky)', purple:'var(--purple)', green:'var(--green)', yellow:'var(--yellow)' };
+
+/* ---------------- 도서 검색 ---------------- */
+function searchBooks(){
+  const keyword = document.getElementById('bookKeyword').value.trim();
+  const resultEl = document.getElementById('bookResult');
+
+  if(!keyword){
+    resultEl.innerHTML = `<div class="status"><span class="big-emoji">🐥</span>찾고 싶은 책 제목이나 낱말을 입력해 주세요!</div>`;
+    return;
+  }
+
+  resultEl.innerHTML = `<div class="status"><span class="big-emoji">🔎</span>책을 찾고 있어요...</div>`;
+
+  if(CONFIG.USE_MOCK_LIBRARY){
+    setTimeout(() => renderBooks(MOCK_BOOKS, keyword), 500);
+    return;
+  }
+
+  /* --------- 실제 API 연동 코드 (키 준비되면 사용) ---------
+  const url = `${CONFIG.LIBRARY_BASE_URL}?authKey=${CONFIG.LIBRARY_API_KEY}&keyword=${encodeURIComponent(keyword)}&pageSize=10&format=json`;
+  fetch(url)
+    .then(res => res.json())
+    .then(data => {
+      const docs = (data.response && data.response.docs) || [];
+      const books = docs.map(d => ({
+        title: d.doc.bookname,
+        author: d.doc.authors,
+        publisher: d.doc.publisher,
+        color: 'sky'
+      }));
+      renderBooks(books, keyword);
+    })
+    .catch(() => {
+      resultEl.innerHTML = `<div class="status"><span class="big-emoji">😥</span>책을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</div>`;
+    });
+  ------------------------------------------------------------- */
+}
+
+function renderBooks(books, keyword){
+  const resultEl = document.getElementById('bookResult');
+  if(!books.length){
+    resultEl.innerHTML = `<div class="status"><span class="big-emoji">📭</span>'${keyword}' 관련 책을 찾지 못했어요.</div>`;
+    return;
+  }
+  resultEl.innerHTML = `
+    <div class="book-list">
+      ${books.map((b,i) => `
+        <div class="book-card" style="animation-delay:${i*0.06}s">
+          <div class="book-spine" style="background:${SPINE[b.color] || 'var(--sky)'}"></div>
+          <div class="book-info">
+            <div class="title">${b.title}</div>
+            <div class="meta">${b.author} · ${b.publisher}</div>
+            <span class="badge">'${keyword}' 검색 결과</span>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+/* ---------------- 급식 검색 ---------------- */
+async function searchMeal(){
+  const officeCode = document.getElementById('officeSelect').value;
+  const officeName = OFFICE_CODES.find(o => o.code === officeCode)?.name || '';
+  const schoolName = document.getElementById('schoolNameInput').value.trim();
+  const date = document.getElementById('mealDate').value;
+  const resultEl = document.getElementById('mealResult');
+
+  if(!schoolName){
+    resultEl.innerHTML = `<div class="status"><span class="big-emoji">🏫</span>학교 이름을 입력해 주세요!</div>`;
+    return;
+  }
+
+  resultEl.innerHTML = `<div class="status"><span class="big-emoji">🍽️</span>${officeName}에서 '${schoolName}' 급식을 확인하고 있어요...</div>`;
+
+  if(CONFIG.USE_MOCK_MEAL){
+    setTimeout(() => renderMeal(pickMockMeal(schoolName), date, schoolName, officeName), 500);
+    return;
+  }
+
+  try{
+    let schulCode = document.getElementById('selectedSchulCode').value;
+    let fullName = schoolName;
+
+    if(!schulCode){
+      // 자동완성으로 고르지 않고 직접 입력 후 바로 버튼을 누른 경우 - 여기서 조회
+      const schoolUrl = `${CONFIG.NEIS_SCHOOL_URL}?KEY=${CONFIG.NEIS_API_KEY}&Type=json&ATPT_OFCDC_SC_CODE=${officeCode}&SCHUL_NM=${encodeURIComponent(schoolName)}`;
+      const schoolRes = await fetch(withCorsProxy(schoolUrl));
+      if(!schoolRes.ok) throw new Error('school-http-' + schoolRes.status);
+      const schoolData = await schoolRes.json();
+      const schoolRows = schoolData.schoolInfo?.[1]?.row || [];
+
+      if(!schoolRows.length){
+        resultEl.innerHTML = `<div class="status"><span class="big-emoji">🔍</span>'${schoolName}' 학교를 ${officeName}에서 찾지 못했어요. 이름을 다시 확인해 주세요.</div>`;
+        return;
+      }
+      schulCode = schoolRows[0].SD_SCHUL_CODE;
+      fullName = schoolRows[0].SCHUL_NM;
+    }
+
+    // 2단계: 학교코드로 급식 정보 조회
+    const ymd = date.replaceAll('-', '');
+    const mealUrl = `${CONFIG.NEIS_MEAL_URL}?KEY=${CONFIG.NEIS_API_KEY}&Type=json&ATPT_OFCDC_SC_CODE=${officeCode}&SD_SCHUL_CODE=${schulCode}&MLSV_YMD=${ymd}`;
+    const mealRes = await fetch(withCorsProxy(mealUrl));
+    if(!mealRes.ok) throw new Error('meal-http-' + mealRes.status);
+    const mealData = await mealRes.json();
+    const mealRows = mealData.mealServiceDietInfo?.[1]?.row || [];
+
+    if(!mealRows.length){
+      renderMeal([], date, fullName, officeName);
+      return;
+    }
+    // DDISH_NM 예: "차조밥1.5.6.<br/>된장국(구리고)5.6.9.13.<br/>..."
+    // 학교명 괄호 표기와 알레르기 번호코드를 제거해서 보여줘요.
+    const items = mealRows[0].DDISH_NM
+      .split('<br/>')
+      .map(s => s.replace(/\([^)]*\)/g, '').replace(/[0-9.]+$/, '').trim())
+      .filter(Boolean);
+    renderMeal(items, date, fullName, officeName);
+
+  } catch(err){
+    console.error(err);
+    resultEl.innerHTML = `
+      <div class="status">
+        <span class="big-emoji">😥</span>
+        급식 정보를 불러오지 못했어요.<br>
+        <span style="font-size:12px;">(브라우저 보안정책(CORS)으로 막혔을 수 있어요. 이 경우 Vercel 프록시를 하나 두면 해결돼요.)</span>
+      </div>`;
+  }
+}
+
+function renderMeal(items, date, schoolName, officeName){
+  const resultEl = document.getElementById('mealResult');
+  if(!items || !items.length){
+    resultEl.innerHTML = `<div class="status"><span class="big-emoji">📭</span>해당 날짜의 급식 정보가 없어요. (주말/방학일 수 있어요)</div>`;
+    return;
+  }
+  const slots = items.slice(0,6);
+  resultEl.innerHTML = `
+    <div class="tray-wrap">
+      <div class="meal-date-label">🏫 ${schoolName} <span style="font-size:12px;color:#8a8fb0;">(${officeName})</span></div>
+      <div class="meal-date-label" style="font-size:14px;margin-top:0;">📅 ${date} 급식표</div>
+      <div class="tray">
+        ${slots.map((item, i) => `
+          <div class="tray-slot">
+            <span class="icon">${(SLOT_META[i] || SLOT_META[5]).icon}</span>
+            ${item}
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+</script>
+</body>
+</html>
