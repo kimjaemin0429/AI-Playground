@@ -195,6 +195,33 @@
   }
   .status .status-icon{ font-size: 18px; display:block; margin-bottom:6px; opacity:.8; }
 
+  .loading-note{ width: 170px; margin: 0 auto; }
+  .loading-note-label{
+    font-family:'Jua', sans-serif;
+    font-weight:400;
+    font-size: 13.5px;
+    color: var(--ink);
+    margin-bottom: 8px;
+  }
+  .loading-note-track{
+    height: 2px;
+    background: var(--line);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .loading-note-fill{
+    height: 2px;
+    background: var(--green);
+    border-radius: 2px;
+    width: 0%;
+    animation: loadingNoteFill 1.4s ease-in-out infinite;
+  }
+  @keyframes loadingNoteFill{
+    0%{ width:0%; }
+    60%{ width:100%; }
+    100%{ width:0%; }
+  }
+
   /* 책 결과: 책장/책등 느낌 */
   .book-list{ display:flex; flex-direction:column; gap:10px; margin-top:14px; }
   .book-card{
@@ -218,6 +245,74 @@
   }
 
   @keyframes slideIn{ from{ opacity:0; transform: translateX(-6px);} to{ opacity:1; transform: translateX(0);} }
+
+  .book-card.clickable{ cursor:pointer; transition: border-color .15s ease, background .15s ease, transform .15s ease; }
+  .book-card.clickable:hover{ border-color: var(--green); background: #F2F7F4; transform: translateX(2px); }
+  .book-card.clickable:active{ transform: scale(.99); }
+
+  /* 책 찾기 위저드: 스텝 표시 */
+  .wizard-steps{ display:flex; align-items:center; justify-content:center; gap:6px; margin-bottom:20px; }
+  .step-dot{
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    background: var(--paper);
+    border: 1.5px solid var(--line);
+    display:flex; align-items:center; justify-content:center;
+    font-size: 12px; font-weight:700;
+    color: var(--muted);
+    transition: all .15s ease;
+  }
+  .step-dot.active{ border-color: var(--green); color: var(--ink); background: rgba(94,155,130,0.12); }
+  .step-dot.done{ border-color: var(--green); background: var(--green); color: white; }
+  .step-line{ width: 26px; height: 1.5px; background: var(--line); }
+  .step-line.done{ background: var(--green); }
+
+  .wizard-block{ display:none; }
+  .wizard-block.active{ display:block; animation: pop .2s ease; }
+  .wizard-label{
+    font-family:'Jua', sans-serif;
+    font-weight: 400;
+    font-size: 14.5px;
+    margin-bottom: 12px;
+    text-align:center;
+  }
+
+  .lib-grid{ display:grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  @media (max-width:400px){ .lib-grid{ grid-template-columns: repeat(2, 1fr); } }
+  .lib-chip{
+    font-family:'Noto Sans KR', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 14px 6px;
+    border: 1.5px solid var(--line);
+    border-radius: 12px;
+    background: var(--paper);
+    color: var(--ink);
+    cursor: pointer;
+    text-align:center;
+    transition: all .15s ease;
+  }
+  .lib-chip:hover{ border-color: var(--green); }
+  .lib-chip.selected{ border-color: var(--green); background: rgba(94,155,130,0.12); }
+
+  .result-card{
+    border: 1.5px solid var(--line);
+    border-radius: 14px;
+    padding: 18px;
+    text-align:center;
+    background: #FBFCFA;
+    animation: pop .2s ease;
+  }
+  .result-card.ok{ border-color: var(--green); }
+  .result-card.wait{ border-color: var(--yellow); }
+  .result-card.none{ border-color: var(--purple); }
+  .result-card.err{ border-color: var(--coral); }
+  .result-card .result-title{ font-family:'Jua', sans-serif; font-weight:400; font-size:16px; margin-bottom:6px; }
+  .result-card .result-book{ font-size:13px; color: var(--muted); margin-bottom:10px; }
+  .result-card .result-desc{ font-size:13px; color: var(--ink); line-height:1.6; white-space:pre-line; margin-bottom:8px; }
+  .result-card .result-lib{ font-size:12px; color: var(--muted); }
+
+  .no-result{ text-align:center; padding: 20px 10px; font-size:13px; color: var(--muted); }
 
   .meal-date-label{
     font-family:'Jua', sans-serif;
@@ -293,6 +388,29 @@
     padding: 12px 0;
   }
 
+  .day-feedback{
+    display:flex;
+    justify-content:flex-end;
+    gap: 6px;
+    margin-top: 10px;
+  }
+  .fb-btn{
+    font-size: 13px;
+    line-height: 1;
+    padding: 5px 9px;
+    border: 1.5px solid var(--line);
+    border-radius: 8px;
+    background: var(--paper);
+    cursor: pointer;
+    opacity: .55;
+    transition: opacity .15s ease, border-color .15s ease, background .15s ease, transform .1s ease;
+  }
+  .fb-btn:hover{ opacity: .85; }
+  .fb-btn:active{ transform: scale(.94); }
+  .fb-btn.active{ opacity: 1; }
+  .fb-btn[data-fb="like"].active{ border-color: var(--green); background: rgba(94,155,130,0.14); }
+  .fb-btn[data-fb="dislike"].active{ border-color: var(--coral); background: rgba(201,123,92,0.14); }
+
   footer{
     text-align:center;
     margin-top: 28px;
@@ -331,7 +449,7 @@
           <select id="officeSelect" onchange="onOfficeChange()"></select>
         </div>
         <div class="field-row autocomplete-wrap">
-          <input type="text" id="schoolNameInput" placeholder="학교 이름을 입력하세요 (예: 늘봄초등학교)" autocomplete="off" />
+          <input type="text" id="schoolNameInput" placeholder="학교 이름을 입력하세요 (예: 도덕초등학교)" autocomplete="off" />
           <input type="hidden" id="selectedSchulCode" value="" />
           <ul id="schoolSuggestions" class="suggest-list"></ul>
         </div>
@@ -345,18 +463,48 @@
       </div>
     </section>
 
-    <!-- 도서관 도서 검색 -->
+    <!-- 도서관 도서 검색 (도서관 선택 → 검색 → 대출확인) -->
     <section id="panel-library" class="tab-panel">
       <div class="card">
-        <div class="field-row">
-          <input type="text" id="bookKeyword" placeholder="예: 마법천자문, 공룡, 위인전" />
-          <button class="btn btn-coral" onclick="searchBooks()">찾기</button>
+        <div class="wizard-steps">
+          <div class="step-dot active" id="stepDot1">1</div>
+          <div class="step-line" id="stepLine1"></div>
+          <div class="step-dot" id="stepDot2">2</div>
+          <div class="step-line" id="stepLine2"></div>
+          <div class="step-dot" id="stepDot3">3</div>
         </div>
-        <div class="hint">도서관정보나루 API 연동 예정 · 지금은 샘플 데이터로 보여줘요</div>
-        <div id="bookResult"></div>
+
+        <div class="wizard-block active" id="wizardStep1">
+          <div class="wizard-label">도서관을 골라보세요</div>
+          <div class="lib-grid">
+            <button class="lib-chip" onclick="selectLibrary(this,'141019','하안도서관')">하안도서관</button>
+            <button class="lib-chip" onclick="selectLibrary(this,'141080','광명도서관')">광명도서관</button>
+            <button class="lib-chip" onclick="selectLibrary(this,'141155','충현도서관')">충현도서관</button>
+            <button class="lib-chip" onclick="selectLibrary(this,'141405','철산도서관')">철산도서관</button>
+            <button class="lib-chip" onclick="selectLibrary(this,'141561','소하도서관')">소하도서관</button>
+            <button class="lib-chip" onclick="selectLibrary(this,'141613','연서도서관')">연서도서관</button>
+          </div>
+        </div>
+
+        <div class="wizard-block" id="wizardStep2">
+          <div class="wizard-label" id="wizardStep2Label">책 이름을 입력하세요</div>
+          <div class="field-row">
+            <input type="text" id="libSearchInput" placeholder="예: 마법천자문" autocomplete="off" onkeydown="if(event.key==='Enter') doLibrarySearch()" />
+            <button class="btn btn-coral" onclick="doLibrarySearch()">찾기</button>
+          </div>
+          <div id="libSearchResult"></div>
+        </div>
+
+        <div class="wizard-block" id="wizardStep3">
+          <div class="wizard-label">대출 가능한지 확인해볼게요</div>
+          <div id="libExistResult"></div>
+          <button class="btn btn-green" id="libResetBtn" style="display:none; margin-top:12px; width:100%;" onclick="resetLibraryWizard()">처음부터 다시 찾기</button>
+        </div>
       </div>
+      <div class="hint">도서관정보나루 API 연동 (자체 서버 프록시 경유) · 광명시 도서관 6곳 기준</div>
     </section>
   </main>
+
 
   <footer>
     만든이: 대디랩스 · 공공데이터포털 Open API 활용
@@ -369,13 +517,12 @@
    CONFIG - API 키가 발급되면 아래에 입력하고 USE_MOCK 을 false 로 바꾸세요.
    ============================================================ */
 const CONFIG = {
-  LIBRARY_API_KEY: '',   // 도서관정보나루(data4library.kr) 인증키 - 아직 미발급
-  USE_MOCK_LIBRARY: true,   // 도서관 키 발급되면 false 로 변경
-  LIBRARY_BASE_URL: 'https://data4library.kr/api/srchBooks',
-
-  // 급식/학교 조회는 이제 우리 Vercel 프로젝트의 /api/neis 를 통해서만 호출합니다.
+  // 도서관/급식 모두 우리 Vercel 프로젝트의 서버리스 프록시를 통해서만 호출합니다.
   // - CORS 문제 없음 (같은 도메인)
   // - API 키는 서버(Vercel 환경변수)에만 있고 브라우저에는 절대 노출되지 않음
+  LIBRARY_SEARCH_URL: '/api/library?action=search',
+  LIBRARY_EXIST_URL: '/api/library?action=exist',
+
   USE_MOCK_MEAL: false,
   NEIS_SCHOOL_URL: '/api/neis?path=schoolInfo',
   NEIS_MEAL_URL: '/api/neis?path=mealServiceDietInfo'
@@ -547,14 +694,7 @@ function switchTab(tab){
   document.getElementById('panel-' + tab).classList.add('active');
 }
 
-/* ---------------- 샘플(목업) 데이터 ---------------- */
-const MOCK_BOOKS = [
-  { title:'마법천자문 1권 - 불꽃 서유기', author:'김미영 글 / 홍거북 그림', publisher:'아울북', color:'coral' },
-  { title:'흔한남매 학습만화 - 지구과학', author:'흔한남매 원작', publisher:'아이세움', color:'sky' },
-  { title:'그리스 로마 신화 1', author:'토마스 불핀치 글', publisher:'삼성출판사', color:'purple' },
-  { title:'who? 세종대왕', author:'이문영 글', publisher:'다산어린이', color:'green' },
-];
-
+/* ---------------- 목업 급식 데이터 (개발/테스트용) ---------------- */
 const MOCK_MEAL_POOL = [
   ['차조밥', '순두부찌개', '탕수육', '어묵볶음', '배추김치', '방울토마토'],
   ['보리밥', '콩나물국', '돈까스&소스', '브로콜리무침', '깍두기', '요구르트'],
@@ -612,73 +752,154 @@ function getWeekMonToFri(baseDateStr){
   return days;
 }
 
-const SLOT_META = [
-  {icon:'🍚', label:'밥'},
-  {icon:'🥣', label:'국/찌개'},
-  {icon:'🍖', label:'메인반찬'},
-  {icon:'🥦', label:'반찬'},
-  {icon:'🥬', label:'김치'},
-  {icon:'🍉', label:'후식'}
-];
-const SPINE = { coral:'var(--coral)', sky:'var(--sky)', purple:'var(--purple)', green:'var(--green)', yellow:'var(--yellow)' };
+/* ---------------- 책 찾기 위저드 (도서관 선택 → 검색 → 대출확인) ---------------- */
+let selectedLibCode = '';
+let selectedLibName = '';
 
-/* ---------------- 도서 검색 ---------------- */
-function searchBooks(){
-  const keyword = document.getElementById('bookKeyword').value.trim();
-  const resultEl = document.getElementById('bookResult');
-
-  if(!keyword){
-    resultEl.innerHTML = `<div class="status">찾고 싶은 책 제목이나 낱말을 입력해 주세요!</div>`;
-    return;
-  }
-
-  resultEl.innerHTML = `<div class="status">책을 찾고 있어요...</div>`;
-
-  if(CONFIG.USE_MOCK_LIBRARY){
-    setTimeout(() => renderBooks(MOCK_BOOKS, keyword), 500);
-    return;
-  }
-
-  /* --------- 실제 API 연동 코드 (키 준비되면 사용) ---------
-  const url = `${CONFIG.LIBRARY_BASE_URL}?authKey=${CONFIG.LIBRARY_API_KEY}&keyword=${encodeURIComponent(keyword)}&pageSize=10&format=json`;
-  fetch(url)
-    .then(res => res.json())
-    .then(data => {
-      const docs = (data.response && data.response.docs) || [];
-      const books = docs.map(d => ({
-        title: d.doc.bookname,
-        author: d.doc.authors,
-        publisher: d.doc.publisher,
-        color: 'sky'
-      }));
-      renderBooks(books, keyword);
-    })
-    .catch(() => {
-      resultEl.innerHTML = `<div class="status">책을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</div>`;
-    });
-  ------------------------------------------------------------- */
+function goToWizardStep(step){
+  [1,2,3].forEach(n => {
+    document.getElementById('wizardStep' + n).classList.toggle('active', n === step);
+    const dot = document.getElementById('stepDot' + n);
+    dot.classList.remove('active', 'done');
+    if(n < step) dot.classList.add('done');
+    else if(n === step) dot.classList.add('active');
+  });
+  const line1 = document.getElementById('stepLine1');
+  const line2 = document.getElementById('stepLine2');
+  line1.classList.toggle('done', step > 1);
+  line2.classList.toggle('done', step > 2);
 }
 
-function renderBooks(books, keyword){
-  const resultEl = document.getElementById('bookResult');
+function selectLibrary(btn, code, name){
+  document.querySelectorAll('.lib-chip').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  selectedLibCode = code;
+  selectedLibName = name;
+
+  document.getElementById('wizardStep2Label').textContent = `${name}에서 책을 찾아볼게요`;
+  document.getElementById('libSearchInput').value = '';
+  document.getElementById('libSearchResult').innerHTML = '';
+  document.getElementById('libExistResult').innerHTML = '';
+  document.getElementById('libResetBtn').style.display = 'none';
+
+  goToWizardStep(2);
+  setTimeout(() => document.getElementById('libSearchInput').focus(), 200);
+}
+
+function loadingNote(label){
+  return `
+    <div class="status">
+      <div class="loading-note">
+        <div class="loading-note-label">${label}</div>
+        <div class="loading-note-track"><div class="loading-note-fill"></div></div>
+      </div>
+    </div>`;
+}
+
+async function doLibrarySearch(){
+  const keyword = document.getElementById('libSearchInput').value.trim();
+  const resultEl = document.getElementById('libSearchResult');
+
+  if(!keyword){
+    resultEl.innerHTML = `<div class="status">찾고 싶은 책 이름을 입력해 주세요!</div>`;
+    return;
+  }
+
+  resultEl.innerHTML = loadingNote('책 찾는 중');
+  document.getElementById('libExistResult').innerHTML = '';
+  document.getElementById('libResetBtn').style.display = 'none';
+
+  try{
+    const url = `${CONFIG.LIBRARY_SEARCH_URL}&title=${encodeURIComponent(keyword)}&pageSize=8&pageNo=1`;
+    const res = await fetch(url);
+    if(!res.ok) throw new Error('search-http-' + res.status);
+    const data = await res.json();
+    const docs = data?.response?.docs || [];
+    const books = docs.map(d => d.doc).filter(Boolean);
+    renderLibraryBooks(books, keyword);
+  } catch(err){
+    console.error(err);
+    resultEl.innerHTML = `<div class="status">책을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</div>`;
+  }
+}
+
+function renderLibraryBooks(books, keyword){
+  const resultEl = document.getElementById('libSearchResult');
   if(!books.length){
-    resultEl.innerHTML = `<div class="status">'${keyword}' 관련 책을 찾지 못했어요.</div>`;
+    resultEl.innerHTML = `<div class="no-result">'${keyword}' 책을 찾지 못했어요. 다른 이름으로 찾아보세요.</div>`;
     return;
   }
   resultEl.innerHTML = `
     <div class="book-list">
-      ${books.map((b,i) => `
-        <div class="book-card" style="animation-delay:${i*0.06}s">
-          <div class="book-spine" style="background:${SPINE[b.color] || 'var(--sky)'}"></div>
+      ${books.map((b, i) => `
+        <div class="book-card clickable" style="animation-delay:${i*0.06}s" onclick='checkBookExist(${JSON.stringify(b.isbn13)}, ${JSON.stringify(b.bookname)})'>
+          <div class="book-spine" style="background:var(--green)"></div>
           <div class="book-info">
-            <div class="title">${b.title}</div>
-            <div class="meta">${b.author} · ${b.publisher}</div>
-            <span class="badge">'${keyword}' 검색 결과</span>
+            <div class="title">${b.bookname}</div>
+            <div class="meta">${b.authors || ''}</div>
           </div>
         </div>
       `).join('')}
-    </div>
-  `;
+    </div>`;
+}
+
+async function checkBookExist(isbn13, bookName){
+  const resultEl = document.getElementById('libExistResult');
+  document.getElementById('libResetBtn').style.display = 'none';
+  goToWizardStep(3);
+  resultEl.innerHTML = loadingNote('대출 가능 여부 확인 중');
+
+  try{
+    const url = `${CONFIG.LIBRARY_EXIST_URL}&libCode=${selectedLibCode}&isbn13=${encodeURIComponent(isbn13)}`;
+    const res = await fetch(url);
+    if(!res.ok) throw new Error('exist-http-' + res.status);
+    const data = await res.json();
+    const r = data?.response?.result;
+    showLibraryResult(bookName, r?.hasBook, r?.loanAvailable);
+  } catch(err){
+    console.error(err);
+    showLibraryResult(bookName, null, null);
+  }
+  document.getElementById('libResetBtn').style.display = 'block';
+}
+
+function showLibraryResult(bookName, hasBook, loanAvail){
+  const resultEl = document.getElementById('libExistResult');
+  let cls, title, desc;
+
+  if(hasBook === 'Y' && loanAvail === 'Y'){
+    cls = 'ok'; title = '빌릴 수 있어요';
+    desc = '도서관에 있고 지금 바로 빌릴 수 있어요.';
+  } else if(hasBook === 'Y' && loanAvail === 'N'){
+    cls = 'wait'; title = '지금은 빌릴 수 없어요';
+    desc = '다른 사람이 빌려갔어요. 반납되면 다시 빌릴 수 있어요.';
+  } else if(hasBook === 'N'){
+    cls = 'none'; title = '이 도서관엔 없어요';
+    desc = '다른 도서관에서 찾아볼까요?';
+  } else {
+    cls = 'err'; title = '확인하지 못했어요';
+    desc = '잠깐 문제가 생겼어요. 다시 한 번 눌러봐 주세요.';
+  }
+
+  resultEl.innerHTML = `
+    <div class="result-card ${cls}">
+      <div class="result-title">${title}</div>
+      <div class="result-book">${bookName}</div>
+      <div class="result-desc">${desc}</div>
+      <div class="result-lib">${selectedLibName}</div>
+    </div>`;
+}
+
+function resetLibraryWizard(){
+  document.querySelectorAll('.lib-chip').forEach(b => b.classList.remove('selected'));
+  selectedLibCode = '';
+  selectedLibName = '';
+  document.getElementById('libSearchInput').value = '';
+  document.getElementById('libSearchResult').innerHTML = '';
+  document.getElementById('libExistResult').innerHTML = '';
+  document.getElementById('libResetBtn').style.display = 'none';
+  document.getElementById('wizardStep2Label').textContent = '책 이름을 입력하세요';
+  goToWizardStep(1);
 }
 
 /* ---------------- 급식 검색 (이번주 월~금) ---------------- */
@@ -696,12 +917,12 @@ async function searchMeal(){
 
   const days = getWeekMonToFri(date); // 월~금 Date 배열
 
-  resultEl.innerHTML = `<div class="status">${officeName}에서 '${schoolName}'의 이번주 급식을 확인하고 있어요...</div>`;
+  resultEl.innerHTML = loadingNote('이번주 메뉴 확인중');
 
   if(CONFIG.USE_MOCK_MEAL){
     setTimeout(() => {
       saveRecentSchool(schoolName, schoolName, officeCode, officeName);
-      renderWeekMeal(days, buildMockWeekData(schoolName, days), schoolName, officeName);
+      renderWeekMeal(days, buildMockWeekData(schoolName, days), schoolName, officeName, schoolName);
     }, 500);
     return;
   }
@@ -747,7 +968,7 @@ async function searchMeal(){
       }
     });
 
-    renderWeekMeal(days, mealsByDate, fullName, officeName);
+    renderWeekMeal(days, mealsByDate, fullName, officeName, schulCode);
 
   } catch(err){
     console.error(err);
@@ -759,7 +980,7 @@ async function searchMeal(){
   }
 }
 
-function renderWeekMeal(days, mealsByDate, schoolName, officeName){
+function renderWeekMeal(days, mealsByDate, schoolName, officeName, schulCode){
   const resultEl = document.getElementById('mealResult');
   const todayYmd = toYmd(new Date());
 
@@ -767,6 +988,7 @@ function renderWeekMeal(days, mealsByDate, schoolName, officeName){
     const ymd = toYmd(d);
     const row = mealsByDate[ymd];
     const isToday = ymd === todayYmd;
+    const fbKey = `${schulCode || 'unknown'}_${ymd}`;
 
     let bodyHtml;
     if(row && row.DDISH_NM){
@@ -785,6 +1007,8 @@ function renderWeekMeal(days, mealsByDate, schoolName, officeName){
       bodyHtml = `<div class="day-empty">이 날은 급식 정보가 없어요</div>`;
     }
 
+    const currentFb = getFeedback(fbKey);
+
     return `
       <div class="day-card ${isToday ? 'today' : ''}">
         <div class="day-header">
@@ -793,6 +1017,10 @@ function renderWeekMeal(days, mealsByDate, schoolName, officeName){
           ${isToday ? '<span class="today-badge">오늘</span>' : ''}
         </div>
         ${bodyHtml}
+        <div class="day-feedback">
+          <button type="button" class="fb-btn ${currentFb === 'like' ? 'active' : ''}" data-fb="like" onclick="toggleFeedback('${fbKey}','like',this)" aria-label="좋아요">👍</button>
+          <button type="button" class="fb-btn ${currentFb === 'dislike' ? 'active' : ''}" data-fb="dislike" onclick="toggleFeedback('${fbKey}','dislike',this)" aria-label="싫어요">👎</button>
+        </div>
       </div>`;
   }).join('');
 
@@ -801,6 +1029,42 @@ function renderWeekMeal(days, mealsByDate, schoolName, officeName){
     <div class="meal-date-label" style="font-size:12.5px;margin-top:0;color:var(--muted);font-family:'Noto Sans KR',sans-serif;">${toDisplayDate(days[0])} ~ ${toDisplayDate(days[4])} · 이번주</div>
     <div class="week-wrap">${cardsHtml}</div>
   `;
+}
+
+/* ---------------- 급식 좋아요/싫어요 (기기별 로컬 저장) ---------------- */
+const MEAL_FEEDBACK_KEY = 'dl_meal_feedback_v1';
+
+function loadFeedbackStore(){
+  try{
+    const raw = localStorage.getItem(MEAL_FEEDBACK_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch(err){
+    return {};
+  }
+}
+
+function getFeedback(key){
+  return loadFeedbackStore()[key] || null;
+}
+
+function toggleFeedback(key, value, btnEl){
+  const store = loadFeedbackStore();
+
+  if(store[key] === value){
+    delete store[key]; // 같은 버튼 다시 누르면 취소
+  } else {
+    store[key] = value;
+  }
+
+  try{
+    localStorage.setItem(MEAL_FEEDBACK_KEY, JSON.stringify(store));
+  } catch(err){
+    console.error(err);
+  }
+
+  const container = btnEl.closest('.day-feedback');
+  container.querySelectorAll('.fb-btn').forEach(b => b.classList.remove('active'));
+  if(store[key]) container.querySelector(`.fb-btn[data-fb="${store[key]}"]`).classList.add('active');
 }
 </script>
 </body>
