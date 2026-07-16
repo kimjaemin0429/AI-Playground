@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>공공데이터 놀이터 - 책 찾기 & 급식 보기</title>
+<title>놀이터 - 책 찾기 & 급식 보기</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
 <style>
@@ -31,6 +31,7 @@
     font-family: 'Noto Sans KR', sans-serif;
     color: var(--ink);
     min-height: 100vh;
+    padding-bottom: 78px; /* 하단 모드 탭바 공간 확보 */
   }
   .app{
     max-width: 640px;
@@ -454,90 +455,383 @@
     padding:4px 10px;
     border-radius:7px;
   }
+
+  /* ============================================================
+     모드 전환 (아이 것 / 내 것)
+     ============================================================ */
+  .app-mode{ display:none; }
+  .app-mode.active{ display:block; animation: pop .2s ease; }
+
+  .bottom-nav{
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    z-index: 50;
+    display:flex;
+    gap: 8px;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(10px);
+    border-top: 1.5px solid var(--line);
+    box-shadow: 0 -4px 16px rgba(44,59,54,0.08);
+  }
+  .bn-btn{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap: 3px;
+    font-family:'Noto Sans KR', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 8px 6px 7px;
+    border: none;
+    border-radius: 14px;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: background .15s ease, color .15s ease, transform .1s ease;
+  }
+  .bn-btn:active{ transform: scale(.96); }
+  .bn-btn .bn-icon{ font-size: 18px; line-height:1; }
+  .bn-btn.active[data-mode="kid"]{ background: rgba(94,155,130,0.14); color: var(--green); }
+  .bn-btn.active[data-mode="mine"]{ background: rgba(74,101,114,0.12); color: var(--purple); }
+
+  /* 내 것: 6개 영역 카드 */
+  .mine-grid{
+    display:grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-top: 6px;
+  }
+  @media (max-width:360px){ .mine-grid{ grid-template-columns: 1fr; } }
+  .mine-card{
+    position: relative;
+    border: 1.5px dashed var(--line);
+    border-radius: 16px;
+    background: var(--paper);
+    padding: 18px 14px;
+    min-height: 128px;
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+    cursor: pointer;
+    transition: border-color .15s ease, background .15s ease, transform .1s ease;
+  }
+  .mine-card:hover{ border-color: var(--purple); background: #F7F9F8; }
+  .mine-card:active{ transform: scale(.98); }
+  .mine-card .mine-icon{
+    width: 34px; height: 34px;
+    border-radius: 10px;
+    background: rgba(74,101,114,0.1);
+    display:flex; align-items:center; justify-content:center;
+    font-size: 17px;
+  }
+  .mine-card .mine-title{
+    font-family:'Jua', sans-serif;
+    font-weight:400;
+    font-size: 14.5px;
+    color: var(--ink);
+    margin-top: 12px;
+  }
+  .mine-card .mine-desc{
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 3px;
+    line-height:1.4;
+  }
+  .mine-card .mine-soon{
+    align-self:flex-start;
+    margin-top: 10px;
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--purple);
+    background: rgba(74,101,114,0.08);
+    border: 1px solid var(--line);
+    padding: 2px 8px;
+    border-radius: 6px;
+  }
+
+  /* 내 것: 카드 편집(수정/삭제) 버튼 */
+  .mine-card-actions{
+    position:absolute;
+    top: 8px; right: 8px;
+    display:flex;
+    gap: 4px;
+  }
+  .mine-action-btn{
+    width: 24px; height: 24px;
+    border-radius: 7px;
+    border: 1px solid var(--line);
+    background: rgba(255,255,255,0.9);
+    color: var(--muted);
+    font-size: 12px;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+    transition: border-color .15s ease, color .15s ease, transform .1s ease;
+  }
+  .mine-action-btn:hover{ border-color: var(--purple); color: var(--purple); }
+  .mine-action-btn.danger:hover{ border-color: var(--coral); color: var(--coral); }
+  .mine-action-btn:active{ transform: scale(.92); }
+
+  /* 내 것: 카드 추가 타일 */
+  .mine-add-card{
+    border: 1.5px dashed var(--line);
+    border-radius: 16px;
+    background: transparent;
+    min-height: 128px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap: 6px;
+    cursor:pointer;
+    color: var(--muted);
+    transition: border-color .15s ease, background .15s ease, color .15s ease, transform .1s ease;
+  }
+  .mine-add-card:hover{ border-color: var(--green); color: var(--green); background: rgba(94,155,130,0.06); }
+  .mine-add-card:active{ transform: scale(.98); }
+  .mine-add-card .mine-add-icon{
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    border: 1.5px dashed currentColor;
+    display:flex; align-items:center; justify-content:center;
+    font-size: 17px;
+  }
+  .mine-add-card .mine-add-label{ font-size: 12.5px; font-weight:700; }
+
+  .mine-empty{
+    text-align:center;
+    padding: 30px 10px;
+    font-size: 13px;
+    color: var(--muted);
+    grid-column: 1 / -1;
+  }
+
+  /* 카드 추가/수정 모달 */
+  .modal-overlay{
+    display:none;
+    position: fixed;
+    inset: 0;
+    background: rgba(44,59,54,0.42);
+    z-index: 100;
+    align-items:flex-end;
+    justify-content:center;
+    padding: 0;
+  }
+  .modal-overlay.show{ display:flex; }
+  .modal-sheet{
+    width: 100%;
+    max-width: 640px;
+    background: var(--paper);
+    border-radius: 20px 20px 0 0;
+    padding: 20px 18px calc(20px + env(safe-area-inset-bottom, 0px));
+    box-shadow: 0 -8px 24px rgba(44,59,54,0.18);
+    animation: sheetUp .18s ease;
+  }
+  @keyframes sheetUp{ from{ transform: translateY(16px); opacity:.4; } to{ transform: translateY(0); opacity:1; } }
+  .modal-title{
+    font-family:'Jua', sans-serif;
+    font-weight:400;
+    font-size: 16px;
+    margin-bottom: 14px;
+    text-align:center;
+  }
+  .modal-field{ margin-bottom: 12px; }
+  .modal-field label{
+    display:block;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 5px;
+    font-weight:700;
+  }
+  .modal-field input{ width:100%; }
+  .modal-row{ display:flex; gap:8px; }
+  .modal-row .modal-field:first-child{ flex: 0 0 76px; }
+  .modal-row .modal-field:last-child{ flex:1; }
+  .modal-actions{ display:flex; gap:8px; margin-top: 6px; }
+  .modal-actions .btn{ flex:1; }
+  .btn-ghost{ background: var(--paper); color: var(--muted); border: 1.5px solid var(--line); }
+  .modal-delete-row{ margin-top: 4px; text-align:center; }
+  .modal-delete-link{
+    background:none; border:none; cursor:pointer;
+    font-size: 12.5px; color: var(--coral); font-weight:700;
+    padding: 6px;
+  }
+
+  /* 서버 동기화 상태 배지 */
+  .sync-badge{
+    display:inline-block;
+    margin-top: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    color: var(--muted);
+    background: var(--paper);
+  }
+  .sync-badge.synced{ border-color: var(--green); color: var(--green); background: rgba(94,155,130,0.1); }
+  .sync-badge.saving{ border-color: var(--yellow); color: var(--yellow); background: rgba(185,141,91,0.12); }
+  .sync-badge.offline{ border-color: var(--coral); color: var(--coral); background: rgba(201,123,92,0.1); }
 </style>
 </head>
 <body>
-<div class="app">
-  <header>
-    <h1>놀이터</h1>
-    <p>도서관 책도 찾아보고, 급식도 확인해요!</p>
-  </header>
 
-  <nav class="tabs">
-    <button class="tab-btn active" data-tab="meal" onclick="switchTab('meal')">급식 보기</button>
-    <button class="tab-btn" data-tab="library" onclick="switchTab('library')">책 찾기</button>
-  </nav>
+<!-- ==================== 아이 것 (급식 / 도서) ==================== -->
+<div class="app-mode active" id="modeKid">
+  <div class="app">
+    <header>
+      <h1>놀이터</h1>
+      <p>도서관 책도 찾아보고, 급식도 확인해요!</p>
+    </header>
 
-  <main>
-    <!-- 급식 검색 -->
-    <section id="panel-meal" class="tab-panel active">
-      <div class="card">
-        <div class="field-row">
-          <select id="officeSelect" onchange="onOfficeChange()"></select>
-        </div>
-        <div class="field-row autocomplete-wrap">
-          <input type="text" id="schoolNameInput" placeholder="학교 이름을 입력하세요 (예: 도덕초등학교)" autocomplete="off" />
-          <input type="hidden" id="selectedSchulCode" value="" />
-          <ul id="schoolSuggestions" class="suggest-list"></ul>
-        </div>
-        <div id="recentSchools" class="recent-wrap"></div>
-        <input type="date" id="mealDate" style="display:none" />
-        <div class="field-row">
-          <button class="btn btn-green" onclick="searchMeal()">이번주 급식 보기</button>
-        </div>
-        <div class="hint">정확한 학교 전체 이름을 입력해 주세요 · 오늘이 속한 주(월~금)를 한번에 보여줘요</div>
-        <div id="mealResult"></div>
-      </div>
-    </section>
+    <nav class="tabs">
+      <button class="tab-btn active" data-tab="meal" onclick="switchTab('meal')">급식 보기</button>
+      <button class="tab-btn" data-tab="library" onclick="switchTab('library')">책 찾기</button>
+    </nav>
 
-    <!-- 도서관 도서 검색 (도서관 선택 → 검색 → 대출확인) -->
-    <section id="panel-library" class="tab-panel">
-      <div class="card">
-        <div class="wizard-steps">
-          <div class="step-dot active" id="stepDot1">1</div>
-          <div class="step-line" id="stepLine1"></div>
-          <div class="step-dot" id="stepDot2">2</div>
-          <div class="step-line" id="stepLine2"></div>
-          <div class="step-dot" id="stepDot3">3</div>
-        </div>
-
-        <div class="wizard-block active" id="wizardStep1">
-          <div class="wizard-label">도서관을 골라보세요</div>
-          <div class="lib-grid">
-            <button class="lib-chip" onclick="selectLibrary(this,'141019','하안도서관')">하안도서관</button>
-            <button class="lib-chip" onclick="selectLibrary(this,'141080','광명도서관')">광명도서관</button>
-            <button class="lib-chip" onclick="selectLibrary(this,'141155','충현도서관')">충현도서관</button>
-            <button class="lib-chip" onclick="selectLibrary(this,'141405','철산도서관')">철산도서관</button>
-            <button class="lib-chip" onclick="selectLibrary(this,'141561','소하도서관')">소하도서관</button>
-            <button class="lib-chip" onclick="selectLibrary(this,'141613','연서도서관')">연서도서관</button>
-          </div>
-        </div>
-
-        <div class="wizard-block" id="wizardStep2">
-          <div class="wizard-label" id="wizardStep2Label">책 이름을 입력하세요</div>
+    <main>
+      <!-- 급식 검색 -->
+      <section id="panel-meal" class="tab-panel active">
+        <div class="card">
           <div class="field-row">
-            <input type="text" id="libSearchInput" placeholder="예: 마법천자문" autocomplete="off" onkeydown="if(event.key==='Enter') doLibrarySearch()" />
-            <button class="btn btn-coral" onclick="doLibrarySearch()">찾기</button>
+            <select id="officeSelect" onchange="onOfficeChange()"></select>
           </div>
-          <div id="libSearchResult"></div>
+          <div class="field-row autocomplete-wrap">
+            <input type="text" id="schoolNameInput" placeholder="학교 이름을 입력하세요 (예: 도덕초등학교)" autocomplete="off" />
+            <input type="hidden" id="selectedSchulCode" value="" />
+            <ul id="schoolSuggestions" class="suggest-list"></ul>
+          </div>
+          <div id="recentSchools" class="recent-wrap"></div>
+          <input type="date" id="mealDate" style="display:none" />
+          <div class="field-row">
+            <button class="btn btn-green" onclick="searchMeal()">이번주 급식 보기</button>
+          </div>
+          <div class="hint">정확한 학교 전체 이름을 입력해 주세요 · 오늘이 속한 주(월~금)를 한번에 보여줘요</div>
+          <div id="mealResult"></div>
         </div>
+      </section>
 
-        <div class="wizard-block" id="wizardStep3">
-          <div class="wizard-label">대출 가능한지 확인해볼게요</div>
-          <div id="libExistResult"></div>
-          <button class="btn btn-green" id="libResetBtn" style="display:none; margin-top:12px; width:100%;" onclick="resetLibraryWizard()">처음부터 다시 찾기</button>
+      <!-- 도서관 도서 검색 (도서관 선택 → 검색 → 대출확인) -->
+      <section id="panel-library" class="tab-panel">
+        <div class="card">
+          <div class="wizard-steps">
+            <div class="step-dot active" id="stepDot1">1</div>
+            <div class="step-line" id="stepLine1"></div>
+            <div class="step-dot" id="stepDot2">2</div>
+            <div class="step-line" id="stepLine2"></div>
+            <div class="step-dot" id="stepDot3">3</div>
+          </div>
+
+          <div class="wizard-block active" id="wizardStep1">
+            <div class="wizard-label">도서관을 골라보세요</div>
+            <div class="lib-grid">
+              <button class="lib-chip" onclick="selectLibrary(this,'141019','하안도서관')">하안도서관</button>
+              <button class="lib-chip" onclick="selectLibrary(this,'141080','광명도서관')">광명도서관</button>
+              <button class="lib-chip" onclick="selectLibrary(this,'141155','충현도서관')">충현도서관</button>
+              <button class="lib-chip" onclick="selectLibrary(this,'141405','철산도서관')">철산도서관</button>
+              <button class="lib-chip" onclick="selectLibrary(this,'141561','소하도서관')">소하도서관</button>
+              <button class="lib-chip" onclick="selectLibrary(this,'141613','연서도서관')">연서도서관</button>
+            </div>
+          </div>
+
+          <div class="wizard-block" id="wizardStep2">
+            <div class="wizard-label" id="wizardStep2Label">책 이름을 입력하세요</div>
+            <div class="field-row">
+              <input type="text" id="libSearchInput" placeholder="예: 마법천자문" autocomplete="off" onkeydown="if(event.key==='Enter') doLibrarySearch()" />
+              <button class="btn btn-coral" onclick="doLibrarySearch()">찾기</button>
+            </div>
+            <div id="libSearchResult"></div>
+          </div>
+
+          <div class="wizard-block" id="wizardStep3">
+            <div class="wizard-label">대출 가능한지 확인해볼게요</div>
+            <div id="libExistResult"></div>
+            <button class="btn btn-green" id="libResetBtn" style="display: none; margin-top:12px; width:100%;" onclick="resetLibraryWizard()">처음부터 다시 찾기</button>
+          </div>
         </div>
-      </div>
-      <div class="hint">도서관정보나루 API 연동 (자체 서버 프록시 경유) · 광명시 도서관 6곳 기준</div>
-    </section>
-  </main>
+        <div class="hint">도서관정보나루 API 연동 (자체 서버 프록시 경유) · 광명시 도서관 6곳 기준</div>
+      </section>
+    </main>
 
-
-  <footer>
-    만든이: 대디랩스 · 공공데이터포털 Open API 활용
-    <br><span class="mock-flag">급식: 실제 API 연동 · 도서: 실제 API 연동</span>
-  </footer>
+    <footer>
+      만든이: 대디랩스 · 공공데이터포털 Open API 활용
+      <br><span class="mock-flag">급식: 실제 API 연동 · 도서: 실제 API 연동</span>
+    </footer>
+  </div>
 </div>
+
+<!-- ==================== 내 것 (재민님 전용 영역, 추후 확장) ==================== -->
+<div class="app-mode" id="modeMine">
+  <div class="app">
+    <header>
+      <h1>아빠 놀이터</h1>
+      <p>아빠가 자유롭게 카드를 채워가는 공간이에요</p>
+      <span class="sync-badge" id="mineSyncBadge">· · ·</span>
+    </header>
+
+    <main>
+      <div class="mine-grid" id="mineGrid"></div>
+      <div class="hint" style="text-align:center; margin-top:14px;">카드를 누르면 등록된 링크로 이동해요. 연필 아이콘으로 링크/이름을 수정하고, 휴지통 아이콘으로 삭제할 수 있어요. 저장된 카드는 서버에 보관되어 다른 기기에서도 똑같이 보여요.</div>
+    </main>
+  </div>
+</div>
+
+<!-- 카드 추가/수정 모달 -->
+<div class="modal-overlay" id="mineModal">
+  <div class="modal-sheet">
+    <div class="modal-title" id="mineModalTitle">카드 추가</div>
+    <input type="hidden" id="mineFormId" value="" />
+    <div class="modal-row">
+      <div class="modal-field">
+        <label for="mineFormIcon">아이콘</label>
+        <input type="text" id="mineFormIcon" maxlength="4" placeholder="📌" />
+      </div>
+      <div class="modal-field">
+        <label for="mineFormTitle">제목</label>
+        <input type="text" id="mineFormTitle" maxlength="14" placeholder="예: 블로그" />
+      </div>
+    </div>
+    <div class="modal-field">
+      <label for="mineFormDesc">설명 (선택)</label>
+      <input type="text" id="mineFormDesc" maxlength="24" placeholder="예: 글감 정리 & 초안" />
+    </div>
+    <div class="modal-field">
+      <label for="mineFormUrl">이동할 링크 (URL)</label>
+      <input type="text" id="mineFormUrl" placeholder="예: https://blog.naver.com/..." />
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost" onclick="closeMineModal()">취소</button>
+      <button type="button" class="btn btn-green" onclick="saveMineCardFromModal()">저장</button>
+    </div>
+    <div class="modal-delete-row" id="mineModalDeleteRow" style="display:none;">
+      <button type="button" class="modal-delete-link" onclick="deleteMineCardFromModal()">이 카드 삭제하기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 삭제 확인용 커스텀 확인창 (일부 브라우저/미리보기 환경에서 window.confirm이 막히는 경우가 있어 자체 구현) -->
+<div class="modal-overlay" id="mineConfirmModal">
+  <div class="modal-sheet">
+    <div class="modal-title" id="mineConfirmText">삭제할까요?</div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost" onclick="closeMineConfirm()">취소</button>
+      <button type="button" class="btn btn-coral" onclick="runMineConfirm()">삭제</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 하단 모드 탭 ==================== -->
+<nav class="bottom-nav">
+  <button type="button" class="bn-btn active" data-mode="kid" onclick="switchMode('kid')">
+    <span class="bn-icon">🧒</span>
+    <span>도윤이꺼</span>
+  </button>
+  <button type="button" class="bn-btn" data-mode="mine" onclick="switchMode('mine')">
+    <span class="bn-icon">🙋</span>
+    <span>아빠꺼</span>
+  </button>
+</nav>
 
 <script>
 /* ============================================================
@@ -714,12 +1008,283 @@ function selectRecentSchool(code){
 
 renderRecentSchools(); // 페이지 로드 시 저장된 최근 검색 목록 표시
 
-/* ---------------- 탭 전환 ---------------- */
+/* ---------------- 탭 전환 (급식 / 도서) ---------------- */
 function switchTab(tab){
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   document.getElementById('panel-' + tab).classList.add('active');
 }
+
+/* ---------------- 모드 전환 (아이 것 / 내 것) ---------------- */
+const APP_MODE_KEY = 'dl_app_mode_v1';
+
+function switchMode(mode){
+  document.getElementById('modeKid').classList.toggle('active', mode === 'kid');
+  document.getElementById('modeMine').classList.toggle('active', mode === 'mine');
+  document.querySelectorAll('.bn-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+  window.scrollTo({ top: 0 });
+  try{ localStorage.setItem(APP_MODE_KEY, mode); } catch(err){ /* 저장 실패해도 무시 */ }
+  if(mode === 'mine') initMineCards(); // 아빠꺼로 들어올 때마다 서버 최신 상태로 새로고침 (다른 기기에서 바꾼 내용도 반영)
+}
+
+(function initMode(){
+  let saved = 'kid';
+  try{ saved = localStorage.getItem(APP_MODE_KEY) || 'kid'; } catch(err){ /* 무시 */ }
+  switchMode(saved);
+})();
+
+/* ---------------- 아빠꺼: 카드 추가/수정/삭제 (서버에 저장 + 기기별 캐시) ----------------
+   진짜 저장소는 /api/cards (Vercel 서버리스 함수, Upstash Redis)에 있습니다.
+   로컬(localStorage)에는 "마지막으로 본 상태"만 캐시해서, 오프라인이거나 서버 응답을
+   기다리는 동안에도 화면이 바로 그려지도록 합니다. */
+const MINE_CARDS_API = '/api/cards';
+const MINE_CARDS_CACHE_KEY = 'dl_mine_cards_cache_v1';
+
+const DEFAULT_MINE_CARDS = [
+  { id:'blog',    icon:'✍️', title:'블로그',   desc:'글감 정리 & 초안',   url:'' },
+  { id:'cleaning',icon:'🥐', title:'클리닝타임', desc:'빵 & 카페 투어 기록', url:'' },
+  { id:'kbo',     icon:'⚾', title:'KBO 데이터', desc:'기록 & 분석 노트',   url:'' },
+  { id:'garden',  icon:'🌱', title:'홈 가드닝',  desc:'참외 등 재배 기록',  url:'' },
+  { id:'appintoss',icon:'📱', title:'앱인토스',  desc:'미니앱 현황 & DAU',  url:'' },
+  { id:'todo',    icon:'✅', title:'할 일',     desc:'업무 & 개인 체크리스트', url:'' },
+];
+
+let mineCards = [];        // 현재 화면에 쓰는 카드 배열 (메모리 상의 최신 상태)
+let mineCardsLoaded = false;
+
+function readMineCardsCache(){
+  try{
+    const raw = localStorage.getItem(MINE_CARDS_CACHE_KEY);
+    if(!raw) return null;
+    const parsed = JSON.parse(raw);
+    if(!Array.isArray(parsed)) return null;
+    // 예전 버전(=url 필드가 없던 시절)에 저장된 카드도 문제없이 동작하도록 보정
+    return parsed.map(c => ({ url:'', ...c }));
+  } catch(err){
+    return null;
+  }
+}
+
+function writeMineCardsCache(list){
+  try{ localStorage.setItem(MINE_CARDS_CACHE_KEY, JSON.stringify(list)); } catch(err){ /* 무시 */ }
+}
+
+function escapeHtml(s){
+  return String(s ?? '').replace(/[&<>"']/g, c => ({
+    '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+  }[c]));
+}
+
+function setSyncBadge(state){
+  const el = document.getElementById('mineSyncBadge');
+  if(!el) return;
+  el.classList.remove('synced', 'saving', 'offline');
+  if(state === 'loading'){ el.textContent = '불러오는 중…'; }
+  else if(state === 'saving'){ el.textContent = '저장 중…'; el.classList.add('saving'); }
+  else if(state === 'synced'){ el.textContent = '서버에 저장됨 · 모든 기기에서 보여요'; el.classList.add('synced'); }
+  else if(state === 'offline'){ el.textContent = '서버 연결 안 됨 · 이 기기에만 저장됨'; el.classList.add('offline'); }
+}
+
+// 아빠꺼 화면에 들어올 때마다 호출 - 캐시로 즉시 그려주고, 서버에서 최신 카드로 갱신
+async function initMineCards(){
+  if(!mineCardsLoaded){
+    mineCards = readMineCardsCache() || DEFAULT_MINE_CARDS.slice();
+    renderMineCards();
+    mineCardsLoaded = true;
+  }
+  setSyncBadge('loading');
+  try{
+    const res = await fetch(MINE_CARDS_API, { cache: 'no-store' });
+    if(!res.ok) throw new Error('cards-get-http-' + res.status);
+    const data = await res.json();
+    if(Array.isArray(data.cards)){
+      mineCards = data.cards.map(c => ({ url:'', ...c }));
+      writeMineCardsCache(mineCards);
+      renderMineCards();
+    }
+    setSyncBadge('synced');
+  } catch(err){
+    console.error(err);
+    setSyncBadge('offline');
+  }
+}
+
+// mineCards 배열을 바꾼 뒤 항상 이 함수를 호출: 화면 갱신 + 캐시 저장 + 서버 저장
+async function persistMineCards(){
+  writeMineCardsCache(mineCards);
+  renderMineCards();
+  setSyncBadge('saving');
+  try{
+    const res = await fetch(MINE_CARDS_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cards: mineCards })
+    });
+    if(!res.ok) throw new Error('cards-post-http-' + res.status);
+    setSyncBadge('synced');
+  } catch(err){
+    console.error(err);
+    setSyncBadge('offline');
+  }
+}
+
+function renderMineCards(){
+  const grid = document.getElementById('mineGrid');
+  if(!grid) return;
+  const cards = mineCards;
+
+  const cardsHtml = cards.map(c => `
+    <div class="mine-card" onclick="onMineCardClick('${c.id}')">
+      <div class="mine-card-actions">
+        <button type="button" class="mine-action-btn" title="수정" onclick="event.stopPropagation(); openMineModal('edit','${c.id}')">✏️</button>
+        <button type="button" class="mine-action-btn danger" title="삭제" onclick="event.stopPropagation(); askDeleteMineCard('${c.id}')">🗑</button>
+      </div>
+      <div class="mine-icon">${escapeHtml(c.icon || '📌')}</div>
+      <div>
+        <div class="mine-title">${escapeHtml(c.title || '제목 없음')}</div>
+        ${c.desc ? `<div class="mine-desc">${escapeHtml(c.desc)}</div>` : ''}
+      </div>
+      ${!c.url ? `<span class="mine-soon">링크 미설정</span>` : ''}
+    </div>
+  `).join('');
+
+  const addTileHtml = `
+    <button type="button" class="mine-add-card" onclick="openMineModal('add')">
+      <div class="mine-add-icon">+</div>
+      <div class="mine-add-label">카드 추가</div>
+    </button>`;
+
+  grid.innerHTML = (cards.length ? cardsHtml : `<div class="mine-empty">아직 카드가 없어요. 아래에서 첫 카드를 추가해 보세요.</div>`) + addTileHtml;
+}
+
+// 카드를 누르면 저장된 링크로 새 탭에서 이동. 링크가 없으면 연필 아이콘으로 등록하도록 안내
+function normalizeUrl(url){
+  const u = (url || '').trim();
+  if(!u) return '';
+  if(/^https?:\/\//i.test(u)) return u;
+  return 'https://' + u;
+}
+
+function onMineCardClick(id){
+  const card = mineCards.find(c => c.id === id);
+  if(!card) return;
+  const url = normalizeUrl(card.url);
+  if(url){
+    window.open(url, '_blank', 'noopener');
+  } else {
+    alert(`'${card.title}'에는 아직 연결된 링크가 없어요. 연필 아이콘을 눌러 이동할 링크를 등록해 주세요.`);
+  }
+}
+
+let mineModalMode = 'add'; // 'add' | 'edit'
+
+function openMineModal(mode, id){
+  mineModalMode = mode;
+  const modal = document.getElementById('mineModal');
+  const deleteRow = document.getElementById('mineModalDeleteRow');
+
+  if(mode === 'edit'){
+    const card = mineCards.find(c => c.id === id);
+    if(!card) return;
+    document.getElementById('mineModalTitle').textContent = '카드 수정';
+    document.getElementById('mineFormId').value = card.id;
+    document.getElementById('mineFormIcon').value = card.icon || '';
+    document.getElementById('mineFormTitle').value = card.title || '';
+    document.getElementById('mineFormDesc').value = card.desc || '';
+    document.getElementById('mineFormUrl').value = card.url || '';
+    deleteRow.style.display = 'block';
+  } else {
+    document.getElementById('mineModalTitle').textContent = '카드 추가';
+    document.getElementById('mineFormId').value = '';
+    document.getElementById('mineFormIcon').value = '';
+    document.getElementById('mineFormTitle').value = '';
+    document.getElementById('mineFormDesc').value = '';
+    document.getElementById('mineFormUrl').value = '';
+    deleteRow.style.display = 'none';
+  }
+
+  modal.classList.add('show');
+  setTimeout(() => document.getElementById('mineFormTitle').focus(), 150);
+}
+
+function closeMineModal(){
+  document.getElementById('mineModal').classList.remove('show');
+}
+
+function saveMineCardFromModal(){
+  const id = document.getElementById('mineFormId').value;
+  const icon = document.getElementById('mineFormIcon').value.trim() || '📌';
+  const title = document.getElementById('mineFormTitle').value.trim();
+  const desc = document.getElementById('mineFormDesc').value.trim();
+  const url = document.getElementById('mineFormUrl').value.trim();
+
+  if(!title){
+    alert('제목을 입력해 주세요!');
+    document.getElementById('mineFormTitle').focus();
+    return;
+  }
+
+  if(mineModalMode === 'edit' && id){
+    const idx = mineCards.findIndex(c => c.id === id);
+    if(idx !== -1) mineCards[idx] = { ...mineCards[idx], icon, title, desc, url };
+  } else {
+    const newId = 'card_' + Date.now() + '_' + Math.floor(Math.random()*1000);
+    mineCards.push({ id:newId, icon, title, desc, url });
+  }
+
+  closeMineModal();
+  persistMineCards();
+}
+
+/* -------- 삭제 확인 (네이티브 confirm() 대신 자체 확인창 사용) --------
+   일부 미리보기/웹뷰 환경에서는 window.confirm이 자동으로 취소 처리되어
+   삭제가 되지 않는 것처럼 보일 수 있어, 화면 안에서 직접 확인받는 방식으로 처리합니다. */
+let pendingDeleteId = null;
+let pendingDeleteFromModal = false;
+
+function askDeleteMineCard(id){
+  const card = mineCards.find(c => c.id === id);
+  if(!card) return;
+  pendingDeleteId = id;
+  pendingDeleteFromModal = false;
+  document.getElementById('mineConfirmText').textContent = `'${card.title}' 카드를 삭제할까요?`;
+  document.getElementById('mineConfirmModal').classList.add('show');
+}
+
+function deleteMineCardFromModal(){
+  const id = document.getElementById('mineFormId').value;
+  if(!id) return;
+  const card = mineCards.find(c => c.id === id);
+  if(!card) return;
+  pendingDeleteId = id;
+  pendingDeleteFromModal = true;
+  document.getElementById('mineConfirmText').textContent = `'${card.title}' 카드를 삭제할까요?`;
+  document.getElementById('mineConfirmModal').classList.add('show');
+}
+
+function closeMineConfirm(){
+  document.getElementById('mineConfirmModal').classList.remove('show');
+  pendingDeleteId = null;
+  pendingDeleteFromModal = false;
+}
+
+function runMineConfirm(){
+  if(!pendingDeleteId){ closeMineConfirm(); return; }
+  mineCards = mineCards.filter(c => c.id !== pendingDeleteId);
+  document.getElementById('mineConfirmModal').classList.remove('show');
+  if(pendingDeleteFromModal) closeMineModal();
+  pendingDeleteId = null;
+  pendingDeleteFromModal = false;
+  persistMineCards();
+}
+
+// 모달 바깥(어두운 배경) 클릭 시 닫기
+document.getElementById('mineModal').addEventListener('click', (e) => {
+  if(e.target.id === 'mineModal') closeMineModal();
+});
+document.getElementById('mineConfirmModal').addEventListener('click', (e) => {
+  if(e.target.id === 'mineConfirmModal') closeMineConfirm();
+});
 
 /* ---------------- 목업 급식 데이터 (개발/테스트용) ---------------- */
 const MOCK_MEAL_POOL = [
